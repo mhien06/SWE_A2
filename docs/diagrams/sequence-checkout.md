@@ -1,57 +1,47 @@
-# Task 2.2 – Sequence Diagram: Đặt hàng và thanh toán
+# Sequence Diagram – Đặt hàng và thanh toán
 
-> **Dự án:** BrewLite – Assignment 2  
-> **Người thực hiện:** Nguyễn Minh Hiển  
-> **Đầu vào:** Task 1.1 (phạm vi), Task 1.2 (SRS), Task 1.3 (Use Case “Đặt hàng và thanh toán”) và Task 2.1 (Activity Diagram của Xuyến).  
-> **Trạng thái:** Mô hình thiết kế để review, không khẳng định tính năng đã triển khai.
+Sơ đồ mô tả cách BrewLite tạo đơn hàng và xác nhận thanh toán qua **VNPay Sandbox**.
 
-## 1. Cách đọc sơ đồ
+**File sơ đồ:**
+- [sequence-checkout.drawio](sources/sequence-checkout.drawio) – bản nguồn, chỉnh sửa bằng [diagrams.net](https://app.diagrams.net/).
+- [sequence-checkout.puml](sources/sequence-checkout.puml) – bản nguồn PlantUML.
+- [sequence-checkout.svg](exports/sequence-checkout.svg) – ảnh xuất để xem sơ đồ.
 
-Sơ đồ gồm đúng năm lifeline theo đề: **Customer, Next.js UI, NestJS API, Database, VNPay Sandbox «Payment Service»**. Đường dọc nét đứt biểu diễn thời gian; **hình chữ nhật mảnh trên lifeline là vùng hoạt động (activation bar)**. Mũi tên liền là yêu cầu/thông điệp, mũi tên nét đứt là phản hồi. Hai khung **`alt`** là hai lựa chọn loại trừ nhau.
+**Tài liệu đối chiếu:** [SRS](../requirements/srs.md) và [đặc tả Use Case Checkout](../requirements/use-case-checkout.md).
 
-| Giai đoạn | Diễn giải ngắn | Yêu cầu đối chiếu |
-|---|---|---|
-| Tạo đơn (1–6) | UI gửi giỏ và JWT; API kiểm tra, tính lại giá; **TX1** tạo `PENDING`, hạn 15 phút, **chưa trừ nguyên liệu**. | FR-04, FR-05, FR-06, FR-07; Task 1.3 M01–M05; Activity tạo đơn của Xuyến. |
-| Thanh toán (7–14) | Gửi `Idempotency-Key`; API tra attempt cũ hoặc tạo attempt/TxnRef mới; chỉ dùng URL còn hợp lệ. | FR-08, FR-11, FR-12; Task 1.3 M06–M07/A05; Activity VNPay. |
-| Xác nhận (15–18) | VNPay gửi IPN đến API; API kiểm chữ ký, mã, tiền; nhánh `alt` thành công/thất bại. **TX2** chỉ tạo `PAID` + trừ nguyên liệu + cộng điểm khi đủ điều kiện, tất cả đúng một lần. | FR-09, FR-10, FR-12; Task 1.3 M08–M09/A06; Activity VNPay. |
-| Trả kết quả (19–23) | UI đọc trạng thái từ backend rồi hiển thị cho Customer. | FR-14; Task 1.3 M10; Activity thanh toán. |
+## Thành phần
 
-## 2. Những trường hợp được cố ý không nhồi vào hình chính
+`Customer` → `Next.js UI` → `NestJS API` → `Database` → `VNPay Sandbox`
 
-- **JWT sai hoặc giỏ không hợp lệ:** API từ chối, không tạo Order (Task 1.3 E01–E02; Activity tạo đơn).
-- **Attempt `UNKNOWN/PENDING`:** không tạo lượt cạnh tranh; cần đối soát (FR-11–FR-13, Task 1.3 E06).
-- **Đơn quá hạn 15 phút:** ngăn tạo attempt mới; cần đối soát nếu giao dịch chưa rõ. Thử thanh toán lại không gia hạn Order (FR-07, FR-13).
-- **Thanh toán VNPay thành công muộn, đơn đã hủy hoặc thiếu nguyên liệu:** giữ chứng cứ giao dịch, không ghi `PAID` sai; xử lý riêng theo SRS/Activity hủy đơn (FR-19–FR-20).
-- **Return URL:** chỉ để điều hướng/hiển thị; không thay thế việc backend xác minh IPN/đối soát.
-- **TX1 và TX2 là hai transaction khác nhau**: tạo đơn không làm thay đổi kho; thanh toán được xác minh hợp lệ mới cập nhật kho và điểm. Không tự cộng điểm bù trong luồng thanh toán thành công.
+- **Customer:** đặt hàng, thanh toán và xem kết quả.
+- **Next.js UI:** nhận thao tác, gọi API và hiển thị trạng thái.
+- **NestJS API:** kiểm tra dữ liệu, tạo đơn, xác minh thanh toán.
+- **Database:** lưu đơn hàng, lượt thanh toán, nguyên liệu và điểm.
+- **VNPay Sandbox:** cổng thanh toán thử nghiệm, gửi kết quả giao dịch.
 
-## 3. Đối chiếu với Task 2.1
+## Luồng chính
 
-| Activity của Xuyến | Bước tương ứng trong Sequence |
-|---|---|
-| Activity tạo đơn hàng | 1–6, TX1 tạo `PENDING`. |
-| Activity thanh toán VNPay | 7–18, tra key, xác minh IPN, TX2 cập nhật kho/điểm hoặc `PAYMENT_FAILED`. |
-| Activity hủy đơn và điều chỉnh điểm/kho | Không vẽ lại thành luồng chính ở Sequence checkout; chỉ ghi các trường hợp cần chuyển xử lý ngoại lệ. |
+1. Khách xác nhận giỏ hàng; UI gửi yêu cầu tạo đơn.
+2. API xác thực JWT, kiểm tra giỏ và tính lại giá trên server.
+3. API lưu đơn `PENDING` với hạn **15 phút**; **chưa trừ nguyên liệu**.
+4. UI yêu cầu thanh toán; API kiểm tra `Idempotency-Key`, tạo hoặc trả lại lượt thanh toán phù hợp và cung cấp URL VNPay.
+5. Khách thanh toán trên VNPay Sandbox. Backend nhận IPN hoặc kết quả đối soát và kiểm tra chữ ký, mã tham chiếu, số tiền.
+6. Nếu giao dịch hợp lệ và đơn đủ điều kiện, API ghi `PAID`, trừ nguyên liệu và cộng điểm **đúng một lần**.
+7. UI đọc trạng thái từ backend và hiển thị kết quả cho khách.
 
-## 4. File nộp và checklist
+## Nhánh xử lý
 
-```text
-docs/diagrams/
-├── sequence-checkout.md
-├── sources/
-│   ├── sequence-checkout.drawio
-│   └── sequence-checkout.puml
-└── exports/
-    └── sequence-checkout.svg
-```
+- **Thanh toán thất bại:** ghi `PAYMENT_FAILED`; chỉ cho thử lại khi đơn còn hạn và lượt trước đã kết thúc rõ ràng.
+- **Đang xác minh (`PENDING/UNKNOWN`):** chờ đối soát, không tạo lượt thanh toán cạnh tranh.
+- **Gửi lại yêu cầu:** cùng `Idempotency-Key` và nội dung thì dùng lại kết quả/lượt cũ; IPN lặp không cập nhật kho hoặc điểm lần hai.
+- **Đơn quá hạn:** không tạo lượt thanh toán mới; đối soát giao dịch chưa rõ trước khi quyết định hủy.
+- **Thanh toán đến muộn hoặc thiếu nguyên liệu:** ghi nhận ngoại lệ và xử lý riêng, không tự chuyển đơn sai sang `PAID`.
 
-- [ ] Có đủ 5 lifeline, mỗi lifeline quan trọng có activation bar.
-- [ ] Mũi tên request/response có chiều và thứ tự hợp lý.
-- [ ] Có kiểm JWT, validate giỏ, tính giá backend.
-- [ ] TX1 tạo `PENDING`; TX2 cập nhật `PAID`, kho và điểm (hai transaction khác nhau).
-- [ ] Khung `alt` cho idempotency và thanh toán thành công/thất bại.
-- [ ] Có trả trạng thái backend để UI thông báo cho Customer.
-- [ ] Các nhánh lỗi, quá hạn và bù điểm trong SRS/Activity không bị mô tả trái ngược.
-- [ ] Source Draw.io và SVG đồng bộ, sơ đồ đen trắng và chữ đọc được.
+## Ký hiệu UML
 
-**Lưu ý:** `/orders`, `/payments` và `/orders/:id` là tên minh họa ở mức thiết kế. Cần đối chiếu với API thực tế ở giai đoạn triển khai.
+- Đường dọc nét đứt: **lifeline**.
+- Thanh chữ nhật dọc: **activation bar** (khoảng thời gian xử lý).
+- Mũi tên liền: **thông điệp gửi đi**; mũi tên nét đứt: **phản hồi**.
+- Khung `alt`: **những nhánh loại trừ nhau theo điều kiện**.
+
+> Các tên endpoint và thông điệp trong sơ đồ mang tính minh họa thiết kế, không phải cam kết API đã triển khai.
