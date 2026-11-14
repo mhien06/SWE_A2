@@ -1,75 +1,57 @@
 @startuml
-' Task 2.2 - Sequence Diagram: Dat hang va thanh toan
-skinparam backgroundColor white
+hide footbox
 skinparam monochrome true
 skinparam shadowing false
-skinparam sequenceMessageAlign center
-hide footbox
-actor "Customer" as C
+actor Customer as C
 participant "Next.js UI" as UI
 participant "NestJS API" as API
-database "Database" as DB
-participant "VNPay Sandbox\n«Payment Service»" as VN
-
-C -> UI: 1. Nhấn Đặt hàng
+database Database as DB
+participant "VNPay Sandbox" as VN
+title Checkout — tổng quan
+C -> UI: Xác nhận giỏ và giá cuối cùng
 activate UI
-UI -> API: 2. POST /orders (JWT, giỏ hàng)
+UI -> API: Tạo Order (JWT, giỏ, điểm tùy chọn)
 activate API
-API -> API: Kiểm JWT, giỏ và giá backend
-API -> DB: 3. TX1: tạo PENDING, hạn 15 phút
-activate DB
-DB --> API: 4. COMMIT; orderId
-deactivate DB
-API --> UI: 5. Order PENDING, tổng tiền
+ref over UI, DB: sequence-create-order: validate và TX1
+API --> UI: Order PENDING, tổng tiền, expiresAt
 deactivate API
-UI --> C: 6. Hiển thị đơn
-C -> UI: 7. Chọn thanh toán
-UI -> API: 8. POST /payments (Idempotency-Key)
+UI --> C: Hiển thị đơn; chưa trừ nguyên liệu
+C -> UI: Chọn thanh toán
+UI -> API: Tạo Payment (Idempotency-Key)
 activate API
-API -> DB: 9. Tra key, hạn Order
-activate DB
-DB --> API: 10. Trạng thái attempt
-deactivate DB
-alt Cùng key và cùng nội dung
-    API --> UI: 11a. Trả attempt / kết quả cũ
-else Key mới và đơn còn hạn
-    API -> DB: 11b. Lưu attempt, TxnRef mới
-    activate DB
-    DB --> API: 12. Lưu thành công
-    deactivate DB
-    API --> UI: 13. URL VNPay
-end
+ref over UI, VN: sequence-payment-vnpay: kiểm tra attempt, ký URL
+API --> UI: URL hợp lệ / lỗi / đang xác minh
 deactivate API
-UI -> VN: 14. Mở VNPay (nếu URL hợp lệ)
-activate VN
+opt Có URL hợp lệ
+UI -> VN: Điều hướng tới URL đã ký
 deactivate UI
-VN -> API: 15. IPN kết quả giao dịch
+C -> VN: Thực hiện thanh toán thử nghiệm
+VN -> API: IPN (độc lập Return URL)
 activate API
-API -> API: Xác minh chữ ký, mã, số tiền
-alt Thành công, đơn còn hợp lệ, đủ nguyên liệu
-    API -> DB: 16a. TX2: PAID + kho + điểm (1 lần)
-    activate DB
-    DB --> API: 17. COMMIT
-    deactivate DB
-else Thất bại đã xác minh
-    API -> DB: 16b. Ghi PAYMENT_FAILED
-    activate DB
-    DB --> API: 17. Đã lưu
-    deactivate DB
-end
-API --> VN: 18. ACK IPN
+ref over API, VN: sequence-payment-vnpay: xác minh, TX2, đối soát
+API --> VN: Phản hồi theo kết quả xử lý đã lưu
 deactivate API
-deactivate VN
+VN --> UI: Return URL tùy chọn
+end
 activate UI
-UI -> API: 19. GET /orders/:id
+UI -> API: GET Order và Payment (JWT, kiểm tra sở hữu)
 activate API
-API -> DB: 20. Đọc trạng thái
-activate DB
-DB --> API: 21. Trạng thái Order
-deactivate DB
-API --> UI: 22. PAID / FAILED / chờ xác minh
+API -> DB: Đọc trạng thái đã lưu
+DB --> API: Order.status và Payment.status riêng
+API --> UI: Order PAID / PAYMENT_FAILED / PENDING; Payment tương ứng
 deactivate API
-UI --> C: 23. Hiển thị kết quả
+UI --> C: Hiển thị trạng thái backend; không tin Return URL
 deactivate UI
-note over API, VN: UNKNOWN, quá hạn, thiếu nguyên liệu: đối soát riêng.\nReturn URL không tự xác nhận PAID.
+opt Customer yêu cầu hủy trước khi pha
+C -> UI: Hủy đơn của mình
+activate UI
+UI -> API: Hủy đơn (JWT, key)
+activate API
+ref over UI, DB: sequence-cancel-order: quyền, khóa, hoàn kho và điểm
+API --> UI: Kết quả hủy / từ chối / chờ đối soát
+deactivate API
+UI --> C: Hiển thị kết quả đã lưu
+deactivate UI
+end
+note over UI, VN: Return URL và IPN có thể đến theo bất kỳ thứ tự nào.
 @enduml
