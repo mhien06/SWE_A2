@@ -674,7 +674,7 @@
         <mxCell id="168" parent="1" vertex="1" value="" style="rounded=0;fillColor=#ffffff;strokeColor=none;">
           <mxGeometry as="geometry" x="72" y="3628" width="2256" height="46" />
         </mxCell>
-        <mxCell id="169" parent="1" vertex="1" value="else  [Thành công nhưng Order CANCELLED hoặc đã quá hạn]" style="text;html=0;whiteSpace=wrap;align=left;verticalAlign=top;fontFamily=Arial;fontSize=22;fontStyle=0;fontColor=#111111;strokeColor=none;fillColor=none;">
+        <mxCell id="169" parent="1" vertex="1" value="else  [Thành công khi Order đã CANCELLED]" style="text;html=0;whiteSpace=wrap;align=left;verticalAlign=top;fontFamily=Arial;fontSize=22;fontStyle=0;fontColor=#111111;strokeColor=none;fillColor=none;">
           <mxGeometry as="geometry" x="86" y="3638" width="2228" height="32" />
         </mxCell>
         <mxCell id="170" parent="1" vertex="1" value="" style="rounded=0;fillColor=#ffffff;strokeColor=none;">
@@ -720,10 +720,10 @@
           <mxGeometry as="geometry" x="86" y="3912" width="2228" height="32" />
         </mxCell>
         <mxCell id="181" parent="1" vertex="1" value="" style="rounded=0;fillColor=#ffffff;strokeColor=none;">
-          <mxGeometry as="geometry" x="1041.0" y="3968" width="678" height="35" />
+          <mxGeometry as="geometry" x="1011.0" y="3968" width="738" height="35" />
         </mxCell>
-        <mxCell id="182" parent="1" vertex="1" value="Payment SUCCEEDED + ngoại lệ thiếu kho; không ghi PAID" style="text;html=0;whiteSpace=wrap;align=center;verticalAlign=top;fontFamily=Arial;fontSize=22;fontStyle=0;fontColor=#111111;strokeColor=none;fillColor=none;">
-          <mxGeometry as="geometry" x="1041.0" y="3972" width="678" height="32" />
+        <mxCell id="182" parent="1" vertex="1" value="Payment SUCCEEDED + Order PAYMENT_EXCEPTION; không ghi PAID" style="text;html=0;whiteSpace=wrap;align=center;verticalAlign=top;fontFamily=Arial;fontSize=22;fontStyle=0;fontColor=#111111;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="1011.0" y="3972" width="738" height="32" />
         </mxCell>
         <mxCell id="183" parent="1" edge="1" style="edgeStyle=none;endArrow=block;endFill=1;dashed=0;strokeColor=#111111;">
           <mxGeometry as="geometry" relative="1">

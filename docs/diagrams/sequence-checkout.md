@@ -42,7 +42,8 @@ Ba nguồn đầu là file bắt buộc của [Issue #5](https://github.com/mhie
 - **Gửi lại yêu cầu:** cùng `Idempotency-Key` và nội dung thì dùng lại kết quả/lượt cũ; cùng key khác payload bị từ chối. URL cũ chỉ dùng khi attempt và Order còn hợp lệ. IPN lặp không cập nhật kho hoặc điểm lần hai.
 - **Đơn quá hạn:** không tạo lượt thanh toán mới; đối soát giao dịch chưa rõ trước khi quyết định hủy.
 - **IPN không hợp lệ:** chữ ký, mã tham chiếu hoặc số tiền sai không làm đổi trạng thái Payment/Order.
-- **Thanh toán đến muộn hoặc thiếu nguyên liệu:** ghi Payment `SUCCEEDED` cùng bản ghi ngoại lệ để đối soát; không tự chuyển Order sang `PAID`, không mở lại `CANCELLED`, không trừ kho hay cộng điểm thường. Kiểm tra refund cũ và ledger trước khi bù `ceil(VNPay thực trả / 100)` điểm đúng một lần.
+- **Thanh toán đến muộn khi Order đã `CANCELLED`:** Payment `SUCCEEDED`, Order giữ `CANCELLED`; không mở lại đơn, không trừ nguyên liệu hoặc cộng điểm thưởng. Kiểm tra refund cũ trước khi bù điểm.
+- **Thanh toán thành công nhưng thiếu nguyên liệu:** Payment `SUCCEEDED`, Order `PAYMENT_EXCEPTION`; không chuyển `PAID`, không trừ kho hoặc cộng `EARN`. Kiểm tra refund cũ và ledger trước khi bù `ceil(VNPay thực trả / 100)` điểm đúng một lần.
 - **QueryDR:** scheduler thuộc backend tra cứu ngoài transaction giữ khóa, xác minh phản hồi và dùng chung quy trình TX2/idempotency với IPN. Kết quả chưa rõ tiếp tục chờ đối soát.
 - **Hủy đơn:** Customer chỉ hủy đơn của mình trước pha; Staff chỉ hủy `PAID` trước pha và phải có lý do. Khóa Order đồng bộ với thao tác bắt đầu pha; kiểm tra lại trạng thái sau đối soát.
 - **Hoàn kho và điểm:** hủy đơn đã trả tiền hoàn theo usage thực tế đã trừ, không theo recipe mới; hoàn điểm dùng, thu hồi điểm thưởng và bù VNPay theo ledger một lần. Refund cũ `PENDING/UNKNOWN` khóa bù; refund `SUCCEEDED` hoặc đã bù thì không cấp quyền lợi trùng.
@@ -66,8 +67,8 @@ Activity liên quan: [Tạo đơn](https://github.com/mhien06/SWE_A2/blob/develo
 ## Các quyết định thiết kế cần reviewer xác nhận
 
 - Thời điểm dùng điểm: đề xuất ghi `REDEEM` nguyên tử tại TX1 và trả lại theo ledger khi hủy hoặc ngoại lệ kết thúc. SRS yêu cầu tính nhất quán nhưng chưa chốt thời điểm này; không coi đây là chính sách đã duyệt.
-- Với thành công sau hạn nhưng Order chưa `CANCELLED`, sơ đồ đề xuất lưu ngoại lệ đến muộn để đối soát, không tự chuyển `PAID`. Không suy diễn kết quả chỉ từ giờ nhận IPN; cần đối chiếu thời điểm giao dịch VNPay trong thiết kế tích hợp.
-- Ngoại lệ thiếu kho/đến muộn được lưu tách khỏi trạng thái Payment. Tên enum kỹ thuật và trạng thái kết thúc Order sau xử lý ngoại lệ cần đồng bộ Task 2.3/3.1; không tự thêm một enum đã được phê duyệt.
+- Hết hạn 15 phút không đồng nghĩa Order đã `CANCELLED`. Khi Payment chưa rõ, hệ thống phải đối soát trước khi quyết định hủy; nhánh thanh toán đến muộn trong sơ đồ áp dụng khi Order **đã** `CANCELLED`.
+- Trường hợp VNPay thành công nhưng thiếu nguyên liệu: Payment `SUCCEEDED` và Order `PAYMENT_EXCEPTION` (đồng bộ Domain Class Diagram); trạng thái Payment luôn được lưu tách khỏi Order.
 - Không cố định tỷ lệ `EARN`; tỷ lệ bù 1 điểm/100 VNĐ không phải tỷ lệ tích điểm. Phần giảm bằng điểm không được cộng điểm thưởng.
 
 ## Ký hiệu UML

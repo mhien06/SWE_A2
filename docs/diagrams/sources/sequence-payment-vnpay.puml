@@ -61,12 +61,12 @@ API -> DB: Kết thúc TX2; không trừ kho / cộng / bù lần hai
 else Thất bại đã xác minh
 API -> DB: Payment FAILED; Order còn chờ mới ghi PAYMENT_FAILED
 API -> DB: COMMIT; không hạ PAID / CANCELLED về PAYMENT_FAILED
-else Thành công nhưng Order CANCELLED hoặc đã quá hạn
+else Thành công khi Order đã CANCELLED
 API -> DB: Payment SUCCEEDED + ngoại lệ đến muộn; không mở lại CANCELLED
 API -> DB: Không xuất kho / EARN; COMMIT
 ref over API, DB: Đối soát ngoại lệ và bù điểm (khung bên dưới)
 else Thành công nhưng thiếu nguyên liệu
-API -> DB: Payment SUCCEEDED + ngoại lệ thiếu kho; không ghi PAID
+API -> DB: Payment SUCCEEDED + Order PAYMENT_EXCEPTION; không ghi PAID
 API -> DB: Không xuất kho / EARN; COMMIT
 ref over API, DB: Đối soát ngoại lệ và bù điểm (khung bên dưới)
 else Thành công; Order hợp lệ; đủ nguyên liệu
