@@ -61,7 +61,7 @@
         <mxCell id="c_Payment" parent="1" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;fontSize=13;" value="&lt;b&gt;Payment&lt;/b&gt;" vertex="1">
           <mxGeometry height="213" width="300" x="420" y="660" as="geometry" />
         </mxCell>
-        <mxCell id="c_Payment_attrs" parent="c_Payment" style="text;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=2;fontFamily=Courier New;fontSize=12;whiteSpace=wrap;overflow=hidden;strokeColor=none;fillColor=none;" value="id: UUID&lt;br&gt;orderId: UUID&lt;br&gt;provider: PaymentProvider&lt;br&gt;status: PaymentStatus&lt;br&gt;amount: Decimal&lt;br&gt;transactionRef: String&lt;br&gt;idempotencyKey: String&lt;br&gt;providerTransactionNo: String&lt;br&gt;responseCode: String&lt;br&gt;expiresAt: DateTime&lt;br&gt;verifiedAt: DateTime&lt;br&gt;createdAt: DateTime" vertex="1">
+        <mxCell id="c_Payment_attrs" parent="c_Payment" style="text;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=2;fontFamily=Courier New;fontSize=12;whiteSpace=wrap;overflow=hidden;strokeColor=none;fillColor=none;" value="id: UUID&lt;br&gt;orderId: UUID&lt;br&gt;provider: PaymentProvider&lt;br&gt;status: PaymentStatus&lt;br&gt;amount: Decimal&lt;br&gt;transactionRef: String&lt;br&gt;idempotencyKey: String&lt;br&gt;providerTransactionNo: String?&lt;br&gt;responseCode: String?&lt;br&gt;expiresAt: DateTime&lt;br&gt;verifiedAt: DateTime?&lt;br&gt;createdAt: DateTime" vertex="1">
           <mxGeometry height="183" width="300" y="30" as="geometry" />
         </mxCell>
         <mxCell id="c_ProductOption" parent="1" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;fontSize=13;" value="&lt;b&gt;ProductOption&lt;/b&gt;" vertex="1">
@@ -89,10 +89,10 @@
           <mxGeometry height="39" width="158" y="44" as="geometry" />
         </mxCell>
         <mxCell id="c_OrderStatus" parent="1" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;fontSize=13;" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;OrderStatus&lt;/b&gt;" vertex="1">
-          <mxGeometry height="155" width="158" x="538" y="1064" as="geometry" />
+          <mxGeometry height="170" width="158" x="538" y="1064" as="geometry" />
         </mxCell>
-        <mxCell id="c_OrderStatus_attrs" parent="c_OrderStatus" style="text;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=2;fontFamily=Courier New;fontSize=12;whiteSpace=wrap;overflow=hidden;strokeColor=none;fillColor=none;" value="PENDING&lt;br&gt;PAYMENT_FAILED&lt;br&gt;PAID&lt;br&gt;PREPARING&lt;br&gt;READY_FOR_PICKUP&lt;br&gt;COMPLETED&lt;br&gt;CANCELLED" vertex="1">
-          <mxGeometry height="111" width="158" y="44" as="geometry" />
+        <mxCell id="c_OrderStatus_attrs" parent="c_OrderStatus" style="text;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=2;fontFamily=Courier New;fontSize=12;whiteSpace=wrap;overflow=hidden;strokeColor=none;fillColor=none;" value="PENDING&lt;br&gt;PAYMENT_FAILED&lt;br&gt;PAYMENT_EXCEPTION&lt;br&gt;PAID&lt;br&gt;PREPARING&lt;br&gt;READY_FOR_PICKUP&lt;br&gt;COMPLETED&lt;br&gt;CANCELLED" vertex="1">
+          <mxGeometry height="126" width="158" y="44" as="geometry" />
         </mxCell>
         <mxCell id="c_PaymentStatus" parent="1" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;fontSize=13;" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;PaymentStatus&lt;/b&gt;" vertex="1">
           <mxGeometry height="126" width="158" x="704" y="1064" as="geometry" />

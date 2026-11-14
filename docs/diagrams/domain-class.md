@@ -26,8 +26,8 @@ Tài liệu giải thích domain model trong `sources/domain-class.drawio` (Task
 | `Order` | Đơn đặt đồ uống nhận tại quầy: `orderCode`, `status: OrderStatus`, các khoản tiền do backend tính, điểm sử dụng và `expiresAt`. |
 | `OrderItem` | Một dòng của Order, lưu **snapshot** tại thời điểm đặt: `productNameSnapshot`, `selectedSizeSnapshot`, `selectedToppingsSnapshot`, `unitPriceSnapshot`, `quantity` và `lineTotal`. |
 | `OrderIngredientUsage` | Bản ghi **lượng nguyên liệu thực tế đã trừ** cho một OrderItem khi Order chuyển `PAID` (`quantityDeducted`, `unitSnapshot`, `ingredientNameSnapshot`, `deductedAt`) và lượng đã hoàn khi hủy (`quantityRestored`, `restoredAt`, `restoreIdempotencyKey`). |
-| `Payment` | Một lượt thanh toán (Payment Attempt) của Order qua `provider`, với `status: PaymentStatus`, `amount`, `transactionRef`, `idempotencyKey`, `providerTransactionNo`, `responseCode`, `expiresAt`, `verifiedAt`. |
-| `OrderCancellation` | Thông tin hủy đơn: người hủy (`cancelledByUserId?`, `cancelledByRole?`), `reason?`, `isAutomatic` (hủy do hết hạn), `idempotencyKey`, `cancelledAt`. |
+| `Payment` | Một lượt thanh toán (Payment Attempt) của Order qua `provider`, với `status: PaymentStatus`, `amount`, `transactionRef`, `idempotencyKey`, `providerTransactionNo?`, `responseCode?`, `expiresAt`, `verifiedAt?`. Ba trường `providerTransactionNo`, `responseCode`, `verifiedAt` **rỗng** trước khi nhận và xác minh kết quả thanh toán. |
+| `OrderCancellation` | Thông tin hủy đơn: người hủy (`cancelledByUserId?`, `cancelledByRole?`), `reason?`, `isAutomatic` (tự hủy do hết hạn, chỉ với Order chưa `PAID`), `idempotencyKey`, `cancelledAt`. |
 | `VNPayRefundRecord` | Theo dõi riêng một yêu cầu refund VNPay cũ của Payment (`amount`, `status: RefundStatus`, `providerRefundRef?`, `requestedAt`, `resolvedAt?`). Dùng để loại trừ quyền lợi trùng; BrewLite không mở luồng refund mới. |
 | `LoyaltyTransaction` | Sổ cái (ledger) điểm BrewLite của User: `type`, `points`, `valueVnd?`, liên kết tùy chọn tới Order (`orderId?`) và Payment (`paymentId?`), `idempotencyKey` chống ghi trùng. |
 | `Promotion` `«future»` | Chương trình khuyến mãi (mã, loại, giá trị, thời gian hiệu lực, trạng thái). Chưa thuộc MVP. |
@@ -56,7 +56,7 @@ Tài liệu giải thích domain model trong `sources/domain-class.drawio` (Task
 | `UserRole` | CUSTOMER, STAFF, MANAGER | `User.role`, `OrderCancellation.cancelledByRole` |
 | `UserStatus` | ACTIVE, INACTIVE | `User.status` |
 | `ProductOptionType` | SIZE, TOPPING | `ProductOption.type` |
-| `OrderStatus` | PENDING, PAYMENT_FAILED, PAID, PREPARING, READY_FOR_PICKUP, COMPLETED, CANCELLED | `Order.status` |
+| `OrderStatus` | PENDING, PAYMENT_FAILED, PAYMENT_EXCEPTION, PAID, PREPARING, READY_FOR_PICKUP, COMPLETED, CANCELLED | `Order.status` |
 | `PaymentStatus` | PENDING, SUCCEEDED, FAILED, UNKNOWN, EXPIRED | `Payment.status` |
 | `PaymentProvider` | VNPAY_SANDBOX | `Payment.provider` |
 | `MeasurementUnit` | GRAM, MILLILITER, UNIT | `Ingredient.unit`, `RecipeIngredient.unit`, `OrderIngredientUsage.unitSnapshot` |
@@ -89,7 +89,7 @@ Multiplicity nằm cạnh class mà nó mô tả. Ví dụ `User 1 — 0..1 Cart
 | 14 | `Order 1 ◆— 0..* Payment` | Composition | Order mới chưa có Payment; có thể có nhiều lượt thanh toán (mục 6). |
 | 15 | `Payment 1 ◆— 0..* VNPayRefundRecord` | Composition | Thường không có; chỉ phát sinh khi tồn tại yêu cầu refund VNPay cũ cần đối soát. |
 | 16 | `Order 1 ◆— 0..1 OrderCancellation` | Composition | Mỗi Order bị hủy tối đa một lần; Order không bị hủy thì không có bản ghi. |
-| 17 | `User 0..1 — 0..* OrderCancellation` | Association | Người thực hiện hủy; rỗng khi hệ thống tự hủy do hết hạn (`isAutomatic = true`). |
+| 17 | `User 0..1 — 0..* OrderCancellation` | Association | Người thực hiện hủy; rỗng khi hệ thống tự hủy Order chưa `PAID` do hết hạn (`isAutomatic = true`). |
 | 18 | `User 1 — 0..* LoyaltyTransaction` | Association | Mỗi giao dịch điểm thuộc đúng một User. |
 | 19 | `Order 0..1 — 0..* LoyaltyTransaction` | Association | Giao dịch điểm có thể gắn với một Order (EARN, REDEEM, hoàn/thu hồi, bù) hoặc không (ADJUST). |
 | 20 | `Promotion 0..1 — 0..* Order` | Association (`«future»`) | Mỗi Order áp dụng tối đa một Promotion. |
@@ -98,15 +98,19 @@ Multiplicity nằm cạnh class mà nó mô tả. Ví dụ `User 1 — 0..1 Cart
 
 ```text
 PENDING ──(thanh toán thất bại đã xác minh)──> PAYMENT_FAILED
-PENDING / PAYMENT_FAILED ──(Payment SUCCEEDED đã xác minh)──> PAID
+PENDING / PAYMENT_FAILED ──(Payment SUCCEEDED đã xác minh, đủ nguyên liệu)──> PAID
+PENDING / PAYMENT_FAILED ──(Payment SUCCEEDED đã xác minh, không đủ nguyên liệu)──> PAYMENT_EXCEPTION
 PAID → PREPARING → READY_FOR_PICKUP → COMPLETED
-PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết hạn)──> CANCELLED
+PENDING / PAYMENT_FAILED ──(quá expiresAt, đã xác nhận không có thanh toán thành công)──> CANCELLED   [tự hủy]
+PENDING / PAYMENT_FAILED / PAID chưa pha ──(Customer/Staff hủy hợp lệ)──> CANCELLED
 ```
 
 - Order được tạo ở `PENDING` cùng OrderItem snapshot; **chưa trừ nguyên liệu** (FR-06, BR-02).
 - `expiresAt = createdAt + 15 phút` theo đồng hồ server; thanh toán lại **không** gia hạn Order (FR-07, BR-03).
 - Chỉ Payment được backend xác minh `SUCCEEDED` mới chuyển Order sang `PAID` (FR-09, FR-10).
 - Thanh toán thất bại đã xác minh chuyển Order sang `PAYMENT_FAILED`; còn hạn thì khách được thử lại bằng Payment mới (FR-11, BR-13).
+- **Tự hủy theo hạn** chỉ áp dụng cho Order chưa `PAID` (`PENDING` hoặc `PAYMENT_FAILED`) và chỉ khi đã xác nhận không có thanh toán thành công (FR-13). Order đã `PAID` **không** tự hủy sau 15 phút; Order `PAID` chỉ bị hủy khi Customer/Staff hủy hợp lệ trước `PREPARING` (FR-15, FR-16, BR-05).
+- `PAYMENT_EXCEPTION`: backend đã xác minh Payment `SUCCEEDED` nhưng không đủ nguyên liệu nên Order **không** chuyển `PAID`; Payment vẫn giữ `SUCCEEDED`. Order ở trạng thái này không trừ nguyên liệu, không cộng điểm `EARN`, không bị tự hủy theo `expiresAt` và không được chuyển sang `PREPARING` (BR-12; Task 1.3 E09).
 - Từ `PAID`, Staff/Manager chuyển tuần tự từng bước; không bỏ bước, không quay lui (FR-24).
 - Từ `PREPARING` trở đi không được hủy; `CANCELLED` không chuyển lại trạng thái hoạt động (BR-06).
 
@@ -132,6 +136,7 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 - Khi Order chuyển `PAID`: trừ `quantityOnHand` và tạo `OrderIngredientUsage` với `quantityDeducted`, `unitSnapshot`, `ingredientNameSnapshot`, trong cùng transaction với việc ghi nhận thanh toán, **đúng một lần** (FR-10).
 - Khi hủy Order đã trừ kho: hoàn theo `quantityDeducted` đã lưu, **không** tính lại từ Recipe hiện tại; ghi `quantityRestored`, `restoredAt`, `restoreIdempotencyKey` (FR-17, FR-21, BR-07).
 - Hủy Order chưa thanh toán thì không có OrderIngredientUsage và lượng hoàn bằng 0 (FR-17).
+- Order `PAYMENT_EXCEPTION` không trừ nguyên liệu nên cũng không có OrderIngredientUsage (BR-12).
 
 ## 8. Business rules và invariant
 
@@ -142,8 +147,8 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 3. Backend đối chiếu chữ ký, mã tham chiếu và số tiền giao dịch trước khi công nhận thanh toán (FR-09). Không cộng điểm thưởng trên phần đã giảm bằng điểm (FR-10).
 4. Thanh toán thất bại đã xác minh chuyển Order sang `PAYMENT_FAILED` và được thử lại khi còn hạn (FR-11, BR-13).
 5. `Idempotency-Key` (`Payment.idempotencyKey`) ngăn tạo giao dịch lặp: cùng key và cùng nội dung trả lại kết quả cũ; cùng key khác nội dung bị từ chối. IPN hoặc đối soát lặp không tạo tác động phụ (FR-12, BR-09).
-6. Order hết hạn sau 15 phút tính từ `createdAt`; thử lại thanh toán không gia hạn; quá hạn không tạo Payment mới (FR-07, FR-13).
-7. `PENDING`/`UNKNOWN` không được tự kết luận thất bại; Order hết hạn chỉ tự hủy khi đã xác nhận không có giao dịch thành công (FR-13, BR-04).
+6. Order chưa `PAID` hết hạn sau 15 phút tính từ `createdAt`; thử lại thanh toán không gia hạn; quá hạn không tạo Payment mới (FR-07, FR-13).
+7. `PENDING`/`UNKNOWN` không được tự kết luận thất bại; chỉ Order chưa `PAID` (`PENDING`, `PAYMENT_FAILED`) mới tự hủy khi quá hạn, và chỉ khi đã xác nhận không có giao dịch thành công. Order `PAID` không tự hủy theo hạn (FR-13, BR-04).
 
 **Hủy đơn**
 
@@ -160,11 +165,12 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 15. Hủy hợp lệ đơn đã thanh toán VNPay Sandbox được bù bằng điểm BrewLite (`VNPAY_COMPENSATION`): `points = ceil(số tiền VNPay thực trả / 100)`, `valueVnd` lưu số VND đã trả, `paymentId` trỏ Payment tương ứng. Ví dụ 29.050đ → 291 điểm (FR-19, BR-08).
 16. Điểm bù **không phải** VNPay hoàn tiền; tỷ lệ 1 điểm = 100 VND chỉ áp dụng cho điểm bù, không phải tỷ lệ tích điểm thông thường (FR-19, BR-10).
 17. Giao dịch thành công đến sau khi Order đã `CANCELLED`: không mở lại đơn, không trừ nguyên liệu, không `EARN`; bù điểm đúng một lần theo quy tắc 15 (FR-19, BR-11).
+18. VNPay thành công nhưng không đủ nguyên liệu: Payment giữ `SUCCEEDED`, Order chuyển `PAYMENT_EXCEPTION` thay vì `PAID`; không trừ nguyên liệu, không `EARN`; bù theo số VNPay đã trả bằng `LoyaltyTransaction` loại `VNPAY_COMPENSATION` (`paymentId` trỏ Payment tương ứng) sau khi xác minh không có refund trùng qua `VNPayRefundRecord` (BR-12, FR-19, FR-20; Task 1.3 E09).
 
 **Refund VNPay cũ**
 
-18. `VNPayRefundRecord` theo dõi riêng các yêu cầu refund cũ; mỗi Payment chỉ được nhận **một** quyền lợi: refund VNPay **hoặc** điểm bù (FR-20, BR-09).
-19. Refund cũ `SUCCEEDED` thì không cấp điểm bù; refund `PENDING`/`UNKNOWN` thì khóa bù và đối soát trước (FR-20).
+19. `VNPayRefundRecord` theo dõi riêng các yêu cầu refund cũ; mỗi Payment chỉ được nhận **một** quyền lợi: refund VNPay **hoặc** điểm bù (FR-20, BR-09).
+20. Refund cũ `SUCCEEDED` thì không cấp điểm bù; refund `PENDING`/`UNKNOWN` thì khóa bù và đối soát trước (FR-20).
 
 ## 9. MVP, future và ranh giới VNPay Sandbox
 
@@ -178,7 +184,7 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 **VNPay Sandbox không phải domain entity:**
 
 - Đây là hệ thống ngoài BrewLite (actor `VNPay Sandbox «Payment Service»`), không vẽ thành class.
-- BrewLite chỉ lưu dấu vết giao dịch trong `Payment` (`provider = VNPAY_SANDBOX`, `transactionRef`, `providerTransactionNo`, `responseCode`, `verifiedAt`) và dấu vết refund cũ trong `VNPayRefundRecord`.
+- BrewLite chỉ lưu dấu vết giao dịch trong `Payment` (`provider = VNPAY_SANDBOX`, `transactionRef`, `providerTransactionNo`, `responseCode`, `verifiedAt`; ba trường cuối rỗng cho tới khi nhận và xác minh kết quả) và dấu vết refund cũ trong `VNPayRefundRecord`.
 - Return URL, IPN, chữ ký và đối soát là hành vi xử lý của UC-09, không phải dữ liệu miền.
 - Không lưu số thẻ, CVV hoặc thông tin ngân hàng.
 
@@ -189,13 +195,13 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 | `User`, `UserRole`, `UserStatus` | FR-04 | – | UC-01, UC-02; PRE-01 |
 | `Product`, `ProductOption` | FR-01, FR-02, FR-25 | – | UC-03, UC-04, UC-18 |
 | `Cart`, `CartItem` | FR-03, FR-05 | – | UC-05; M01–M03 |
-| `Order`, `OrderItem`, `OrderStatus` | FR-05, FR-06, FR-07, FR-23, FR-24 | BR-02, BR-03, BR-06, BR-13 | UC-06, UC-11, UC-12, UC-14–UC-16; M03–M05 |
+| `Order`, `OrderItem`, `OrderStatus` | FR-05, FR-06, FR-07, FR-13, FR-23, FR-24 | BR-02, BR-03, BR-06, BR-12, BR-13 | UC-06, UC-11, UC-12, UC-14–UC-16; M03–M05, E09 |
 | `Payment`, `PaymentStatus`, `PaymentProvider` | FR-08–FR-14 | BR-01, BR-03, BR-04, BR-09, BR-13 | UC-09, UC-10; M06–M10, A03–A07, E04–E07 |
 | `Ingredient`, `Recipe`, `RecipeIngredient`, `MeasurementUnit` | FR-21, FR-25 | BR-02 | UC-19, UC-20; PRE-03 |
 | `OrderIngredientUsage` | FR-10, FR-17, FR-21 | BR-07, BR-09 | M09, A06; UC-13, UC-17 |
 | `OrderCancellation` | FR-13, FR-15, FR-16, FR-17 | BR-05, BR-06, BR-09 | UC-13, UC-17; E07 |
-| `LoyaltyTransaction`, `LoyaltyTransactionType` | FR-10, FR-18, FR-19, FR-22 | BR-07, BR-08, BR-10, BR-11 | UC-07, UC-08; A02, E03, E08 |
-| `VNPayRefundRecord`, `RefundStatus` | FR-20 | BR-09, BR-11 | UC-13, UC-17; E08 |
+| `LoyaltyTransaction`, `LoyaltyTransactionType` | FR-10, FR-18, FR-19, FR-22 | BR-07, BR-08, BR-10, BR-11, BR-12 | UC-07, UC-08; A02, E03, E08, E09 |
+| `VNPayRefundRecord`, `RefundStatus` | FR-20 | BR-09, BR-11, BR-12 | UC-13, UC-17; E08, E09 |
 | Ghi vết sự kiện (`*At`, `idempotencyKey`, ledger) | FR-26 | BR-09 | M08–M09, E05–E11 |
 | `Promotion` `«future»` | – | – | – |
 
@@ -205,6 +211,7 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 - Các attribute khóa (`userId`, `orderId`, `paymentId`...) được giữ bên cạnh association để rõ dữ liệu cần lưu. `Order` không có `promotionId` vì Promotion là `«future»`.
 - Tỷ lệ tích điểm thông thường (`EARN`) chưa được chốt (SRS §8); mô hình chỉ ghi nhận giao dịch, không cố định tỷ lệ.
 - SRS chưa quy định Order có quay lại `PENDING` khi tạo Payment mới từ `PAYMENT_FAILED` hay không; mô hình chỉ yêu cầu Order còn hạn và lượt trước đã kết thúc rõ ràng.
+- **Ngoại lệ BR-12** được lưu bằng giá trị `OrderStatus.PAYMENT_EXCEPTION` (SRS §1.3 cho phép thống nhất trạng thái trung gian khi thiết kế), không thêm class riêng. Payment vẫn `SUCCEEDED`; việc theo dõi refund cũ và điểm bù dùng các phần tử đã có: `VNPayRefundRecord` và `LoyaltyTransaction(type = VNPAY_COMPENSATION)`. Order được giữ ở `PAYMENT_EXCEPTION` sau khi bù; mô hình không tự suy diễn chuyển sang `CANCELLED` (BR-12; Task 1.3 E09).
 
 ## 12. Điểm cần nhóm xác nhận
 
@@ -213,5 +220,4 @@ PENDING / PAYMENT_FAILED / PAID (chưa pha) ──(hủy hợp lệ hoặc hết
 1. **Công thức `vnpayPayableAmount`** (đề xuất): `vnpayPayableAmount = totalAmount − pointsDiscountAmount`, không âm; và khi xác minh giao dịch, `Payment.amount` phải bằng `Order.vnpayPayableAmount`. SRS chỉ yêu cầu tách riêng tiền VNPay thực trả và giá trị điểm giảm (FR-22) và đối chiếu số tiền (FR-09), chưa chốt công thức.
 2. **Quan hệ `pointsBalance` và ledger** (đề xuất): `User.pointsBalance` luôn bằng tổng `LoyaltyTransaction.points` của User và không âm. SRS chỉ yêu cầu không dùng vượt số dư và ghi sổ mọi biến động (FR-18, FR-22).
 3. **Recipe đang hiệu lực** (đề xuất): mỗi cặp Product/ProductOption chỉ có tối đa một Recipe `isActive = true` tại một thời điểm. SRS chưa quy định cách chọn công thức khi có nhiều phiên bản (FR-21).
-4. **VNPay thành công nhưng không đủ nguyên liệu** (vấn đề mở, BR-12): `OrderStatus` hiện chưa có giá trị cho "trạng thái ngoại lệ để đối soát". Phương án tạm: Payment `SUCCEEDED`, Order không chuyển `PAID`, bù điểm bằng `VNPAY_COMPENSATION`. Cần nhóm quyết định có bổ sung trạng thái ngoại lệ hay không.
-5. **Refund cũ ở trạng thái `FAILED`** (vấn đề mở, FR-20): SRS chỉ quy định refund `SUCCEEDED` thì không bù và refund đang xử lý/chưa rõ thì khóa bù; chưa nêu refund `FAILED` có cho phép bù điểm hay không.
+4. **Refund cũ ở trạng thái `FAILED`** (vấn đề mở, FR-20): SRS chỉ quy định refund `SUCCEEDED` thì không bù và refund đang xử lý/chưa rõ thì khóa bù; chưa nêu refund `FAILED` có cho phép bù điểm hay không.
