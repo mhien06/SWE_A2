@@ -1,0 +1,75 @@
+@startuml
+hide footbox
+skinparam monochrome true
+skinparam shadowing false
+actor "Customer / Staff" as C
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database Database as DB
+participant "VNPay Sandbox" as VN
+title Hủy đơn trước pha — hoàn kho và điểm
+C -> UI: Yêu cầu hủy; Staff nhập lý do
+activate UI
+UI -> API: POST /orders/:id/cancel (JWT, key, lý do)
+activate API
+API -> API: Kiểm quyền; Customer sở hữu đơn; Staff có lý do
+API -> DB: BEGIN TX3; khóa Order, Payment, usage, điểm; tra key
+alt TX3 thực hiện không lỗi
+DB --> API: Trạng thái hiện tại, ledger, refund cũ
+alt Sai quyền / thiếu lý do Staff / cùng key khác payload
+API -> DB: ROLLBACK
+API --> UI: Từ chối; không thay đổi dữ liệu
+else Request lặp hoặc đã CANCELLED
+API -> DB: Kết thúc TX3; không lặp hiệu ứng
+API --> UI: Trả kết quả hủy đã lưu
+else PREPARING / READY_FOR_PICKUP / COMPLETED
+API -> DB: ROLLBACK
+API --> UI: Không được hủy từ khi bắt đầu pha
+else Staff yêu cầu hủy Order khác PAID
+API -> DB: ROLLBACK
+API --> UI: Staff chỉ hủy PAID trước pha
+else Có Payment PENDING / UNKNOWN
+API -> DB: Kết thúc TX3; lưu yêu cầu chờ đối soát
+API -> VN: QueryDR ngoài transaction giữ khóa
+VN --> API: Kết quả giao dịch
+API -> API: Xác minh và xử lý theo sequence-payment-vnpay
+API --> UI: Chờ nếu chưa rõ; khi rõ chạy lại TX3 và kiểm tra mới
+else Customer hủy PENDING / PAYMENT_FAILED; xác nhận chưa trả tiền
+API -> DB: CANCELLED + OrderCancellation; không hoàn kho
+API -> DB: RETURN_REDEEMED theo ledger chưa hoàn, một lần
+API -> DB: COMMIT TX3
+API --> UI: Đã hủy đơn chưa thanh toán
+else Hủy PAID trước pha hợp lệ
+API -> DB: CANCELLED + OrderCancellation
+API -> DB: Hoàn đúng usage đã trừ; restoredAt và key chống lặp
+API -> DB: RETURN_REDEEMED + REVERSE_EARNED theo ledger một lần
+alt Refund cũ PENDING / UNKNOWN
+API -> DB: Lưu chờ đối soát; khóa cấp điểm bù
+else Refund SUCCEEDED hoặc đã bù
+API -> DB: Không cấp quyền lợi trùng
+else Xác minh không có refund thành công / đang xử lý và chưa bù
+API -> DB: Bù ceil(VNPay thực trả / 100) điểm; gắn Payment và key
+end
+API -> DB: COMMIT TX3 nguyên tử
+API --> UI: Đã hủy; bù xong hoặc chờ đối soát
+end
+else Lỗi bất kỳ lệnh ghi / commit trong TX3
+API -> DB: ROLLBACK trạng thái hủy, hoàn kho và các biến động điểm
+API --> UI: Báo lỗi; không trả hủy thành công; retry an toàn
+end
+deactivate API
+UI --> C: Hiển thị kết quả backend
+deactivate UI
+note over API, DB: Bắt đầu PREPARING dùng cùng khóa Order; chỉ một thao tác thắng.
+group Scheduler tự hủy đơn chưa thanh toán hết hạn
+API -> DB: Kiểm tra hạn 15 phút; đọc tất cả Payment
+ref over API, VN: QueryDR nếu chưa rõ; xử lý theo sequence-payment-vnpay
+API -> DB: BEGIN; khóa và kiểm tra lại Order / Payment
+alt Order chờ đã hết hạn; không có SUCCEEDED và không còn PENDING / UNKNOWN
+API -> DB: CANCELLED + hủy tự động; trả REDEEM chưa hoàn; không hoàn kho
+API -> DB: COMMIT; hiệu ứng một lần
+else Đã PAID / trạng thái đổi / còn kết quả chưa rõ
+API -> DB: Kết thúc TX; không tự hủy PAID hoặc hủy mù
+end
+end
+@enduml

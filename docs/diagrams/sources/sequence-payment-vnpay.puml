@@ -1,0 +1,111 @@
+@startuml
+hide footbox
+skinparam monochrome true
+skinparam shadowing false
+actor Customer as C
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database Database as DB
+participant "VNPay Sandbox" as VN
+title VNPay — attempt, IPN, QueryDR và ngoại lệ
+C -> UI: Chọn thanh toán
+activate UI
+UI -> API: POST /payments (JWT, orderId, Idempotency-Key)
+activate API
+API -> API: Xác thực JWT và kiểm tra sở hữu Order
+API -> DB: BEGIN; khóa Order; tra key, payload, tất cả attempt
+DB --> API: Trạng thái Order / Payment, key, expiresAt
+alt Sai quyền / không tìm thấy Order
+API -> DB: ROLLBACK
+API --> UI: Từ chối
+else Cùng key nhưng khác payload
+API -> DB: ROLLBACK
+API --> UI: Xung đột key; không tạo Payment
+else Cùng key và cùng payload
+API -> DB: Kết thúc TX; không tạo Payment mới
+API --> UI: Kết quả cũ; URL chỉ dùng nếu Order và attempt còn hợp lệ
+else Key mới nhưng Order hết hạn / không cho thanh toán
+API -> DB: ROLLBACK
+API --> UI: Từ chối; không gia hạn; đối soát nếu cần
+else Key mới nhưng có attempt PENDING / UNKNOWN
+API -> DB: Kết thúc TX; không tạo attempt cạnh tranh
+API --> UI: Đang xác minh; chờ IPN / QueryDR
+else Còn hạn; chưa có attempt hoặc các lượt cũ kết thúc thất bại rõ ràng
+API -> DB: Lưu Payment PENDING, TxnRef duy nhất, key + payload
+API -> API: Ký URL; Payment.expiresAt không vượt Order.expiresAt
+API -> DB: COMMIT; lỗi lưu/ký/commit thì rollback, không trả URL
+API --> UI: URL hợp lệ
+end
+deactivate API
+opt Có URL hợp lệ
+UI -> VN: Mở URL đã ký
+deactivate UI
+C -> VN: Thanh toán thử nghiệm
+VN --> UI: Return URL tùy chọn; chỉ hiển thị, không xác nhận PAID
+end
+note over UI, VN: IPN và Return URL độc lập; có thể đến theo bất kỳ thứ tự nào.
+VN -> API: IPN kết quả
+activate API
+API -> API: Xác minh chữ ký, TxnRef, số tiền, mã kết quả
+alt Chữ ký / mã / tiền không hợp lệ
+API --> VN: Phản hồi lỗi; không đổi Payment / Order
+else Kết quả PENDING / UNKNOWN hoặc chưa rõ
+API -> DB: Lưu chờ xác minh; lên lịch QueryDR; không hạ trạng thái cuối
+API --> VN: Phản hồi tiếp nhận; không công nhận thành công
+else Kết quả đã xác minh
+API -> DB: BEGIN TX2; khóa Order, Payment, kho, điểm; kiểm tra ledger
+alt TX2 thực hiện không lỗi
+DB --> API: Trạng thái hiện tại, hiệu ứng đã xử lý
+alt IPN lặp / nghiệp vụ giao dịch đã hoàn tất
+API -> DB: Kết thúc TX2; không trừ kho / cộng / bù lần hai
+else Thất bại đã xác minh
+API -> DB: Payment FAILED; Order còn chờ mới ghi PAYMENT_FAILED
+API -> DB: COMMIT; không hạ PAID / CANCELLED về PAYMENT_FAILED
+else Thành công khi Order đã CANCELLED
+API -> DB: Payment SUCCEEDED + ngoại lệ đến muộn; không mở lại CANCELLED
+API -> DB: Không xuất kho / EARN; COMMIT
+ref over API, DB: Đối soát ngoại lệ và bù điểm (khung bên dưới)
+else Thành công nhưng thiếu nguyên liệu
+API -> DB: Payment SUCCEEDED + Order PAYMENT_EXCEPTION; không ghi PAID
+API -> DB: Không xuất kho / EARN; COMMIT
+ref over API, DB: Đối soát ngoại lệ và bù điểm (khung bên dưới)
+else Thành công; Order hợp lệ; đủ nguyên liệu
+API -> DB: Payment SUCCEEDED + Order PAID; trừ kho và lưu usage
+API -> DB: EARN theo chính sách trên tiền VNPay; ghi ledger một lần
+API -> DB: COMMIT TX2 nguyên tử
+end
+API --> VN: ACK theo kết quả đã xử lý
+else Lỗi bất kỳ lệnh ghi / commit trong TX2
+API -> DB: ROLLBACK toàn bộ thay đổi Order / Payment / kho / điểm
+API --> VN: Phản hồi lỗi xử lý; không ACK thành công; cho phép retry
+API -> API: Giữ dấu vết yêu cầu đã xác minh để retry / QueryDR
+end
+end
+deactivate API
+loop Scheduler nội bộ: giao dịch chưa rõ / Order tới hạn 15 phút
+API -> DB: Đọc attempt PENDING / UNKNOWN, Order cần đối soát
+API -> VN: QueryDR theo TxnRef (ngoài transaction giữ khóa)
+VN --> API: Kết quả tra cứu
+API -> API: Xác minh phản hồi, mã và tiền
+alt Chưa rõ / tra cứu lỗi
+API -> DB: Giữ UNKNOWN; hẹn lại; không tự hủy mù
+else Đã xác minh kết quả
+ref over API, DB: Áp dụng cùng TX2 và idempotency như IPN
+opt Order hết hạn; đã loại trừ thành công và mọi attempt chưa rõ
+ref over API, DB: sequence-cancel-order: tự hủy đơn chưa thanh toán
+end
+end
+end
+group Đối soát ngoại lệ đến muộn / thiếu kho
+API -> DB: BEGIN; khóa Order, Payment, điểm; tra refund cũ và ledger
+alt Refund cũ PENDING / UNKNOWN
+API -> DB: Ghi chờ đối soát; COMMIT; khóa cấp điểm bù
+else Refund SUCCEEDED hoặc đã bù điểm
+API -> DB: Không cấp quyền lợi trùng; ghi kết quả; COMMIT
+else Xác minh không có refund thành công / đang xử lý và chưa bù
+API -> DB: VNPAY_COMPENSATION = ceil(VNPay thực trả / 100), gắn Payment
+API -> DB: Trả REDEEM chưa hoàn khi kết thúc đơn; không EARN; COMMIT
+end
+end
+note over API, DB: Ledger có khóa nghiệp vụ duy nhất; lỗi rollback và retry an toàn.
+@enduml
