@@ -1,0 +1,21 @@
+<mxfile host="app.diagrams.net" agent="BrewLite Task 3.1" version="24.0.0">
+  <diagram id="c4-context" name="C4 Level 1 – System Context – BrewLite">
+    <mxGraphModel dx="1000" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="cust" value="&lt;b&gt;Khách hàng&lt;/b&gt;&lt;br&gt;[Person]&lt;br&gt;Xem menu, đặt đơn, thanh toán,&lt;br&gt;theo dõi / hủy đơn" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#08427B;strokeColor=#073B6F;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="250" width="210" height="90" as="geometry"/></mxCell>
+        <mxCell id="staff" value="&lt;b&gt;Nhân viên quầy&lt;/b&gt;&lt;br&gt;[Person]&lt;br&gt;Tiếp nhận, pha chế, cập nhật&lt;br&gt;trạng thái, hủy đơn PAID" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#08427B;strokeColor=#073B6F;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="385" y="30" width="230" height="90" as="geometry"/></mxCell>
+        <mxCell id="mgr" value="&lt;b&gt;Quản lý cửa hàng&lt;/b&gt;&lt;br&gt;[Person]&lt;br&gt;Quản lý menu, nguyên liệu,&lt;br&gt;phân quyền, vận hành" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#08427B;strokeColor=#073B6F;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="730" y="30" width="220" height="90" as="geometry"/></mxCell>
+        <mxCell id="sys" value="&lt;b&gt;BrewLite&lt;/b&gt;&lt;br&gt;[Software System]&lt;br&gt;Web mobile-first/PWA + REST API&lt;br&gt;+ PostgreSQL: menu, giỏ, đơn,&lt;br&gt;thanh toán, kho, điểm" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#1168BD;strokeColor=#0B4884;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="370" y="235" width="260" height="120" as="geometry"/></mxCell>
+        <mxCell id="vnp" value="&lt;b&gt;VNPay Sandbox&lt;/b&gt;&lt;br&gt;[External System]&lt;br&gt;Cổng thanh toán thử nghiệm&lt;br&gt;(ngoài ranh giới BrewLite)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#8A8A8A;strokeColor=#6B6B6B;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="740" y="450" width="230" height="100" as="geometry"/></mxCell>
+        <mxCell id="e1" value="Dùng qua&lt;br&gt;trình duyệt&lt;br&gt;(HTTPS)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="cust" target="sys"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e2" value="Quản lý đơn (HTTPS)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="staff" target="sys"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e3" value="Quản trị (HTTPS)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="mgr" target="sys"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e4" value="Tạo URL thanh toán đã ký;&lt;br&gt;truy vấn giao dịch (querydr)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="sys" target="vnp"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="657" y="432"/></Array></mxGeometry></mxCell>
+        <mxCell id="e5" value="IPN: thông báo kết quả&lt;br&gt;server-to-server (HMAC)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="vnp" target="sys"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="698" y="363"/></Array></mxGeometry></mxCell>
+        <mxCell id="e6" value="Redirect trình duyệt: nhập thẻ/ngân hàng&lt;br&gt;rồi quay về Return URL" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="cust" target="vnp"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="140" y="500"/></Array></mxGeometry></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

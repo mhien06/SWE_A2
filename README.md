@@ -6,5 +6,6 @@
 - [Task 1.2 – SRS](docs/requirements/srs.md)
 - [Task 1.3 – Đặc tả Use Case Checkout](docs/requirements/use-case-checkout.md)
 - [Task 2.2 – Sequence Diagram Checkout](docs/diagrams/sequence-checkout.md)
+- [Task 3.1 – Kiến trúc hệ thống và ADR](docs/architecture/architecture.md)
 
 Repo hiện chứa tài liệu yêu cầu và sơ đồ thiết kế; chưa có mã nguồn ứng dụng.
