@@ -23,7 +23,7 @@
 
 - (+) Không trộn vòng đời; dữ liệu đối soát rõ ràng, không mất bằng chứng đã thu tiền.
 - (+) Khớp Domain Class và Sequence, dễ truy vết.
-- (−) Thêm trạng thái `PAYMENT_EXCEPTION`; SRS chưa quy định cách kết thúc nên cần nhóm chốt (architecture.md mục 11).
+- (−) Thêm trạng thái `PAYMENT_EXCEPTION` (đã chốt ở Domain Class), cần quy ước hiển thị cho khách và hướng dẫn vận hành đối soát.
 - (−) Cần quy ước hiển thị cho khách ở từng tổ hợp trạng thái.
 
 ## Phương án đã cân nhắc

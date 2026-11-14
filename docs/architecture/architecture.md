@@ -95,7 +95,7 @@ stateDiagram-v2
     [*] --> PENDING: TX1 tạo đơn (expiresAt = createdAt + 15 phút)
     PENDING --> PAYMENT_FAILED: Payment FAILED đã xác minh
     PENDING --> PAID: Payment SUCCEEDED, đủ nguyên liệu
-    PAYMENT_FAILED --> PAID: thanh toán lại thành công (còn hạn)
+    PAYMENT_FAILED --> PAID: Payment SUCCEEDED đã xác minh, đủ nguyên liệu
     PENDING --> PAYMENT_EXCEPTION: Payment SUCCEEDED, thiếu nguyên liệu
     PAYMENT_FAILED --> PAYMENT_EXCEPTION: Payment SUCCEEDED, thiếu nguyên liệu
     PENDING --> CANCELLED: khách hủy / tự hủy hết hạn đã đối soát
@@ -108,7 +108,8 @@ stateDiagram-v2
     COMPLETED --> [*]
 ```
 
-- `PAID` **không** tự hủy sau 15 phút. `PAYMENT_EXCEPTION` không tự hủy theo `expiresAt`, không sang `PREPARING`, giữ nguyên sau khi bù điểm (Domain Class §5, §11). Cách kết thúc `PAYMENT_EXCEPTION` chưa được SRS quy định (mục 11).
+- `PAID` **không** tự hủy sau 15 phút. `PAYMENT_EXCEPTION` (đã được Domain Class chốt) không tự hủy theo `expiresAt`, không sang `PREPARING`, giữ nguyên sau khi bù điểm (Domain Class §5, §11).
+- **Hạn Order chỉ giới hạn việc tạo Payment attempt mới** (FR-07, FR-08); nó **không** chặn việc ghi nhận kết quả thành công đã xác minh. Kết quả `SUCCEEDED` nhận được sau hạn (qua IPN hoặc QueryDR) luôn đi qua TX2 và được xử lý theo **trạng thái Order tại thời điểm đó**: nếu Order còn `PENDING`/`PAYMENT_FAILED` (chưa bị tự hủy) → `PAID` hoặc `PAYMENT_EXCEPTION`; nếu Order đã `CANCELLED` → nhánh thanh toán đến muộn (mục 6.2).
 - Từ `PREPARING` trở đi không hủy được; `CANCELLED` không mở lại (BR-06, BR-11).
 
 | `Payment.status` | Ý nghĩa | Cho tạo Payment mới |
@@ -237,10 +238,10 @@ Domain model **không** có `idempotencyKey` trên `Order`; nguy cơ tạo trùn
 1. Chọn Order `PENDING`/`PAYMENT_FAILED` có `expiresAt <= now()` bằng `FOR UPDATE SKIP LOCKED` theo lô (an toàn khi chạy nhiều bản API).
 2. Với Order có Payment chưa rõ: chạy nhiệm vụ 1 **trước**; khi mọi Payment đã rõ, khóa và **kiểm tra lại** Order/Payment.
 3. Chỉ khi **không có `SUCCEEDED` và không còn `PENDING`/`UNKNOWN`**: `CANCELLED` + `OrderCancellation(isAutomatic = true)`, `RETURN_REDEEMED` cho `REDEEM` chưa hoàn, không hoàn kho (E07, TC-1.3-11/12).
-4. Thành công tìm được lúc đối soát: xử lý theo TX2 (`PAID` hoặc `PAYMENT_EXCEPTION`).
+4. Thành công tìm được lúc đối soát (kể cả sau `Order.expiresAt`): xử lý theo TX2 và **trạng thái Order hiện tại** – Order còn `PENDING`/`PAYMENT_FAILED` → `PAID` hoặc `PAYMENT_EXCEPTION` (Order không bị tự hủy vì đã có `SUCCEEDED`); Order đã `CANCELLED` → nhánh đến muộn, không mở lại đơn (mục 6.2).
 5. **Không** tự hủy `PAID` hay `PAYMENT_EXCEPTION`.
 
-Không tạo Payment mới sau `Order.expiresAt`; thanh toán lại không gia hạn Order (FR-07, FR-13).
+Hạn Order chỉ chặn **tạo Payment mới** sau `Order.expiresAt`; thanh toán lại không gia hạn Order (FR-07, FR-13). Việc ghi nhận kết quả thành công đã xác minh không bị chặn bởi hạn.
 
 ## 8. Dữ liệu, migration, logging, health check, cấu hình và secret
 
@@ -278,7 +279,7 @@ JWT + `RolesGuard`; kiểm tra **sở hữu đơn** ở Service (NFR-02); `Valid
 |---|---|---|---|
 | Modular monolith | Transaction ACID xuyên module; một image, một pipeline | Không scale riêng từng module; cần kỷ luật ranh giới | Ưu tiên nhất quán và tiến độ hơn khả năng scale riêng |
 | Scheduler trong API | Ít thành phần, đủ cho quy mô bài tập | Job nặng ảnh hưởng API; nhiều bản API cùng chạy | `SKIP LOCKED`, lô nhỏ; tách worker sau nếu cần |
-| Tách `OrderStatus` / `PaymentStatus` + `PAYMENT_EXCEPTION` | Không trộn hai vòng đời; không mất tiền đã thu | Thêm trạng thái; chưa có quy tắc kết thúc `PAYMENT_EXCEPTION` | Theo Domain Class; chờ nhóm chốt cách xử lý cuối |
+| Tách `OrderStatus` / `PaymentStatus` + `PAYMENT_EXCEPTION` | Không trộn hai vòng đời; không mất tiền đã thu | Thêm trạng thái cần quy ước hiển thị cho khách | Theo Domain Class đã chốt |
 | Idempotency bằng khóa trên thực thể + ràng buộc DB | Đúng ngay cả khi code ứng dụng sai | Nhiều ràng buộc/xử lý lỗi unique | Chấp nhận để tránh sai kho/điểm |
 | Tin IPN/QueryDR, không tin Return URL | An toàn trước giả mạo trình duyệt | Khách thấy "đang xác minh" một lúc | Đúng đắn hơn phản hồi tức thì |
 | Bù bằng điểm, không VNPay Refund | Không cần luồng hoàn tiền tự động | Khách nhận điểm thay vì tiền | Theo phạm vi Task 1.1 |
@@ -303,18 +304,17 @@ JWT + `RolesGuard`; kiểm tra **sở hữu đơn** ở Service (NFR-02); `Valid
 
 ## 11. Điểm cần nhóm xác nhận khi review
 
-Gộp từ SRS §8, Domain Class §12, Sequence và các đề xuất của tài liệu này:
+Chỉ gồm các điểm **thực sự chưa được chốt** (SRS §8, Domain Class §12, Sequence) và các đề xuất riêng của tài liệu này. `PAYMENT_EXCEPTION`, TX1–TX3, thanh toán đến muộn và bù điểm đã được Task 1–2 chốt nên **không** nằm trong danh sách này.
 
 1. **Tỷ lệ tích điểm `EARN`** và quy tắc làm tròn (SRS §8, chưa chốt).
 2. **Thời hạn mỗi Payment attempt** (≤ hạn Order; nếu dùng 5 phút/lượt cần chốt) – biến `PAYMENT_ATTEMPT_TTL_MINUTES`.
 3. **Thời điểm ghi `REDEEM`** ở TX1 và `vnpayPayableAmount = totalAmount − pointsDiscountAmount` (Sequence, Domain Class §12.1).
 4. **Refund VNPay cũ ở trạng thái `FAILED`** có cho bù điểm không (Domain Class §12.4).
-5. **Kết thúc `PAYMENT_EXCEPTION`**: sau khi bù điểm đơn giữ nguyên trạng thái; SRS chưa nói có chuyển sang trạng thái khác không.
-6. **`pointsBalance` không âm** (Domain Class §12.2) so với việc thu hồi `EARN` đã tiêu.
-7. **Order `PAYMENT_FAILED` khi tạo Payment mới**: kiến trúc giữ `PAYMENT_FAILED` cho đến khi có kết quả; Domain Class chưa quy định có quay lại `PENDING`.
-8. **Idempotency khi tạo đơn** (`POST /orders` không có khóa trong domain model).
-9. **Bảng `payment_event`** là bảng kỹ thuật ngoài domain model **[Đề xuất]**.
-10. **Công cụ**: Prisma (ADR-003), Pino (ADR-010), cách lưu JWT phía client (ADR-009) – đổi được nếu nhóm đã chọn khác.
+5. **`pointsBalance` không âm** (Domain Class §12.2) so với việc thu hồi `EARN` đã tiêu.
+6. **Order `PAYMENT_FAILED` khi tạo Payment mới**: kiến trúc giữ `PAYMENT_FAILED` cho đến khi có kết quả; Domain Class chưa quy định có quay lại `PENDING`.
+7. **Idempotency khi tạo đơn** (`POST /orders` không có khóa trong domain model).
+8. **Bảng `payment_event`** là bảng kỹ thuật ngoài domain model **[Đề xuất]**.
+9. **Công cụ**: Prisma (ADR-003), Pino (ADR-010), cách lưu JWT phía client (ADR-009) – đổi được nếu nhóm đã chọn khác.
 
 ## 12. Truy vết kiến trúc → yêu cầu → mã nguồn
 

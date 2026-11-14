@@ -26,7 +26,7 @@ Quy tắc chung: lỗi ghi/commit → rollback toàn bộ, không trả thành c
 - (+) Không bao giờ có trạng thái nửa vời (`PAID` mà chưa trừ kho, hoặc ngược lại).
 - (+) Sổ cái/usage cho phép kiểm toán và chứng minh "đúng một lần".
 - (−) Giữ khóa dòng Order trong thời gian TX; chấp nhận vì mỗi đơn xử lý nhanh, ít cạnh tranh.
-- (−) Quy tắc cho `PAYMENT_EXCEPTION` và `REDEEM` ở TX1 còn là đề xuất, cần nhóm xác nhận.
+- (−) `PAYMENT_EXCEPTION` và nhánh thanh toán đến muộn đã được Task 1–2 chốt (BR-11, BR-12, Domain Class §5, §11). Chỉ thời điểm ghi `REDEEM` ở TX1 và công thức `vnpayPayableAmount` còn là đề xuất cần nhóm xác nhận.
 
 ## Phương án đã cân nhắc
 

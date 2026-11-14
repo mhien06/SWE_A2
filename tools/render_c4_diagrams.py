@@ -162,28 +162,31 @@ edges=[
 build('c4-container',1000,700,nodes,edges,'C4 Level 2 – Container – BrewLite')
 
 # ================= Component (NestJS API) =================
+# Chiều mũi tên = "phụ thuộc / gọi tới" (khớp bảng phụ thuộc ở architecture.md mục 5.2)
 nodes=[
  nd('web','container',580,15,240,60,'Web App (Next.js)','HTTPS, REST/JSON + JWT'),
  nd('b','boundary',20,100,880,650,'API (NestJS) – kiến trúc phân lớp, chia module theo domain'),
  nd('cc','bar',40,130,840,60,'Cross-cutting (Common/Config)','ConfigModule (validate env, secret) · Pino logger + correlation-id · ValidationPipe ·','ExceptionFilter · JwtAuthGuard + RolesGuard · HealthModule (/health, /health/ready)'),
- nd('auth','component',40,225,190,80,'AuthModule','đăng ký/đăng nhập, JWT,','RBAC Customer/Staff/Manager'),
- nd('prod','component',250,225,190,80,'ProductModule','Product, ProductOption,','Recipe, RecipeIngredient'),
- nd('cart','component',460,225,190,80,'CartModule','Cart/CartItem, giá tạm tính,','kiểm tra & báo giá server'),
- nd('promo','future',670,225,190,80,'PromotionModule «future»','chưa thuộc MVP','(không có FR trong SRS)'),
- nd('order','component',250,380,270,90,'OrderModule','Order/OrderItem, state machine,','OrderCancellation; điều phối TX1/TX3'),
- nd('pay','component',610,380,250,90,'PaymentModule','VNPayGateway, Payment attempt, IPN,','VNPayRefundRecord, QueryDR'),
+ nd('auth','component',40,225,170,80,'AuthModule','đăng ký/đăng nhập, JWT,','RBAC 3 vai trò'),
+ nd('prod','component',265,225,170,80,'ProductModule','Product, ProductOption,','Recipe, RecipeIngredient'),
+ nd('cart','component',490,225,170,80,'CartModule','Cart/CartItem, giá tạm tính,','báo giá server'),
+ nd('promo','future',715,225,170,80,'PromotionModule «future»','chưa thuộc MVP','(không có FR trong SRS)'),
+ nd('order','component',250,380,250,90,'OrderModule','Order/OrderItem, state machine,','OrderCancellation; điều phối TX1/TX3'),
+ nd('pay','component',650,380,230,90,'PaymentModule','VNPayGateway, Payment attempt,','IPN, VNPayRefundRecord, QueryDR'),
  nd('inv','component',40,550,220,80,'InventoryModule','Ingredient.quantityOnHand,','OrderIngredientUsage (trừ/hoàn)'),
  nd('loy','component',290,550,220,80,'LoyaltyModule','LoyaltyTransaction (ledger),','pointsBalance, bù điểm VNPay'),
- nd('sched','component',610,550,250,80,'SchedulerModule','tự hủy đơn chưa trả hết hạn,','QueryDR attempt PENDING/UNKNOWN'),
+ nd('sched','component',650,550,230,80,'SchedulerModule','tự hủy đơn chưa trả hết hạn,','QueryDR attempt PENDING/UNKNOWN'),
  nd('dal','bar',40,675,820,55,'Persistence','PrismaService (Prisma Client) · prisma migrate · seed','Transaction + SELECT … FOR UPDATE (TX1 / TX2 / TX3)'),
  nd('db','db',330,785,260,80,'PostgreSQL','[Container: DB]'),
  nd('vnp','external',1000,375,200,100,'VNPay Sandbox','[External System]'),
 ]
 edges=[
  ed('web','cc','REST/JSON + JWT'),
- ed('cart','order','tạo đơn|từ giỏ'),
- ed('prod','order','giá, công thức'),
- ed('pay','order','TX2:|PAID / FAILED /|EXCEPTION'),
+ ed('order','cart','báo giá|từ giỏ'),
+ ed('order','prod','giá,|công thức'),
+ ed('cart','prod','giá|sản phẩm'),
+ ed('prod','inv','đọc Ingredient|(công thức)',via=[(170,340),(150,500)]),
+ ed('pay','order','TX2: PAID /|PAYMENT_FAILED /|PAYMENT_EXCEPTION'),
  ed('sched','order','tự hủy|(chưa PAID)'),
  ed('sched','pay','QueryDR|đối soát'),
  ed('order','inv','trừ / hoàn kho|(TX2 / TX3)'),
