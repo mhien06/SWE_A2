@@ -1,33 +1,36 @@
-# ADR-005: Idempotency nhiều lớp và kiểm soát xử lý trùng
+# ADR-005: Idempotency nhiều lớp, khóa nằm trên thực thể
 
 - **Trạng thái:** Đề xuất (chờ review của Nguyễn Minh Hiển)
-- **Ngày:** 2026-11-14
+- **Ngày:** 2026-11-15
 - **Người đề xuất:** Trần Đăng Khoa
-- **Liên quan:** [`architecture.md`](../architecture.md), `docs/requirements/context-and-scope.md`
+- **Liên quan:** [`architecture.md`](../architecture.md), [SRS](../../requirements/srs.md), [Domain Class](../../diagrams/domain-class.md), [Sequence](../../diagrams/sequence-checkout.md)
 
 ## Context
 
-- Client có thể gửi lại yêu cầu; VNPay có thể gửi IPN lặp; scheduler và IPN có thể xử lý cùng một đơn; hủy và thanh toán có thể đồng thời.
-- Sai sót dẫn đến trừ kho hai lần, cộng/bù điểm nhiều lần hoặc xác nhận đơn sai.
+- Client gửi lại yêu cầu; VNPay gửi IPN lặp; Scheduler và IPN có thể xử lý cùng một đơn; hủy, thanh toán, bắt đầu pha có thể đồng thời (FR-12, BR-09, E11).
+- Sai sót dẫn đến trừ kho hai lần, cộng/bù điểm nhiều lần hoặc hai lượt thanh toán cạnh tranh.
 
 ## Decision
 
-Áp dụng bốn lớp độc lập (chi tiết ở `architecture.md` mục 6.3):
+Áp dụng các lớp độc lập (chi tiết ở `architecture.md` mục 6.3), dùng **đúng các trường đã có trong Domain Class**:
 
-1. **HTTP:** header `Idempotency-Key` cho tạo đơn, tạo URL thanh toán, hủy đơn; bảng `idempotency_key` unique `(userId, key)` lưu `requestHash` và phản hồi. Cùng key nhưng khác nội dung → từ chối (`422`); cùng key và cùng nội dung → trả lại phản hồi cũ.
-2. **Giao dịch:** `Payment.txnRef` unique; IPN lưu `payment_event` unique `(txnRef, transactionNo)`; giao dịch đã ở trạng thái cuối thì chỉ trả `RspCode 02`.
-3. **Đồng thời:** `SELECT … FOR UPDATE` đơn và giao dịch trong transaction.
-4. **Hiệu ứng phụ:** unique `(orderId, ingredientId, type)` trên `InventoryMovement`; unique `(orderId, type)` và `(paymentId, type)` trên `LoyaltyTransaction`.
+1. **Tạo Payment attempt:** `Idempotency-Key` lưu ở `Payment.idempotencyKey` (unique) cùng hash nội dung. Cùng key + cùng nội dung → trả kết quả cũ, không tạo attempt mới; cùng key khác nội dung → từ chối (`409`).
+2. **Điều kiện tạo attempt mới:** Order còn hạn và mọi attempt trước đã `FAILED`/`EXPIRED`; có attempt `PENDING`/`UNKNOWN` thì không tạo ("Đang xác minh").
+3. **Giao dịch:** `Payment.transactionRef` unique; IPN/QueryDR lặp chỉ ACK, không đổi gì.
+4. **Hủy:** `OrderCancellation.idempotencyKey`, mỗi Order tối đa một `OrderCancellation`.
+5. **Hoàn kho:** `OrderIngredientUsage.restoreIdempotencyKey`, `quantityRestored ≤ quantityDeducted`.
+6. **Điểm:** `LoyaltyTransaction.idempotencyKey` unique; unique `(paymentId, VNPAY_COMPENSATION)`.
+7. **Đồng thời:** `SELECT … FOR UPDATE` Order/Payment trong TX; chỉ một chuyển trạng thái hợp lệ thắng.
 
-Mọi đường vào xử lý kết quả thanh toán (IPN, đối soát, thanh toán lại) dùng **chung một hàm**.
+Mọi đường xử lý kết quả thanh toán (IPN, QueryDR, đối soát) dùng chung một hàm.
 
 ## Consequences
 
 - (+) Kết quả đúng ngay cả khi tầng ứng dụng có lỗi hoặc có nhiều bản API chạy song song.
-- (+) Có thể test bằng cách gửi lặp cùng một IPN/yêu cầu.
-- (−) Thêm bảng và xử lý lỗi vi phạm unique; bản ghi idempotency cần dọn định kỳ (TTL).
-- (−) Hơi nặng so với quy mô, nhưng chi phí thấp so với rủi ro sai tiền/kho/điểm.
+- (+) Test được bằng cách gửi lặp cùng IPN/yêu cầu (TC-1.3-08, TC-1.3-09).
+- (−) Nhiều ràng buộc và xử lý lỗi vi phạm unique.
+- (−) `Order` không có `idempotencyKey` trong domain model nên `POST /orders` chưa được chống tạo trùng ở tầng DB; giảm thiểu bằng UI, và nhóm cần xem lại (architecture.md mục 11).
 
 ## Phương án đã cân nhắc
 
-Chỉ kiểm tra trạng thái ở tầng ứng dụng (race condition); khóa phân tán Redis (thêm hạ tầng không cần thiết).
+Chỉ kiểm tra trạng thái ở tầng ứng dụng (race condition); bảng `idempotency_key` chung (trùng lặp với các khóa đã có trên thực thể); khóa phân tán Redis (thêm hạ tầng không cần thiết).
