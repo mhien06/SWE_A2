@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { formatVndPrice } from "../catalog";
+import { formatVndPrice, productImage } from "../catalog";
 import { apiFetch } from "../lib/api";
 import { useAuthSession } from "./auth-session";
 
@@ -36,6 +37,7 @@ export default function CartPage() {
   const { session, ready } = useAuthSession();
   const [cart, setCart] = useState<Cart | null>(null);
   const [points, setPoints] = useState(0);
+  const [rate, setRate] = useState<number | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,7 @@ export default function CartPage() {
   useEffect(() => {
     if (!ready || !session) return;
     let active = true;
+    apiFetch<{redemptionVndPerPoint:number|null}>("/loyalty").then(policy => { if(active) setRate(policy.redemptionVndPerPoint); }).catch(() => { /* Keep redemption disabled until its policy is available. */ });
     apiFetch<Cart>("/cart")
       .then((current) => {
         if (active) setCart(current);
@@ -98,7 +101,11 @@ export default function CartPage() {
     }
   }
 
+  const maxPoints = rate && cart ? Math.max(0, Math.min(session?.user.pointsBalance ?? 0, Math.floor(cart.total / rate))) : 0;
+  const invalidPoints = !Number.isInteger(points) || points < 0 || points > maxPoints;
+
   async function getQuote() {
+    if (invalidPoints) return;
     setError("");
     try {
       const result = await apiFetch<Quote>("/orders/quote", {
@@ -112,15 +119,18 @@ export default function CartPage() {
   }
 
   async function createOrder() {
+    if (invalidPoints) return;
+    if (!quote) { await getQuote(); return; }
     setSubmitting(true);
     setError("");
     try {
       const order = await apiFetch<{ id: string }>("/orders", {
         method: "POST",
-        body: JSON.stringify({ pointsRedeemed: points }),
+        body: JSON.stringify({ pointsRedeemed: points, expectedSubtotal: quote.subtotal, expectedPointsDiscount: quote.pointsDiscountAmount }),
       });
       router.push(`/orders/${order.id}`);
     } catch (caught) {
+      setQuote(null);
       setError(caught instanceof Error ? caught.message : "Không tạo được đơn hàng");
     } finally {
       setSubmitting(false);
@@ -154,8 +164,12 @@ export default function CartPage() {
             {cart.items.map((item) => (
               <article className="cart-item" key={item.id}>
                 <div className="cart-item-heading">
-                  <div>
-                    <h2>{item.productName}</h2>
+                  <Link className="cart-product-photo" href={`/products/${item.productId}`}>
+                    <Image src={productImage(item.productId)} alt={item.productName} fill sizes="(min-width: 900px) 112px, 80px" />
+                  </Link>
+                  <div className="cart-product-info">
+                    <h2><Link href={`/products/${item.productId}`}>{item.productName}</Link></h2>
+                    <p className="muted small-note">Size {item.selectedSize} · {item.quantity} ly</p>
                     {!item.productIsAvailable && (
                       <p className="form-error">Món hiện đã tạm ngừng bán.</p>
                     )}
@@ -235,29 +249,35 @@ export default function CartPage() {
               <input
                 type="number"
                 min={0}
-                max={session.user.pointsBalance}
+                max={maxPoints}
+                step={1}
+                disabled={!rate}
                 value={points}
                 onChange={(event) => {
                   setPoints(Math.max(0, Number(event.target.value) || 0));
                   setQuote(null);
+                  setError("");
                 }}
               />
             </label>
+            <p className="muted small-note">{rate ? `1 điểm = ${formatVndPrice(rate)}. Đơn này dùng tối đa ${maxPoints} điểm. Có thể thanh toán toàn bộ bằng điểm.` : "Chưa tải được chính sách sử dụng điểm. Bạn vẫn có thể đặt hàng không dùng điểm."}</p>
+            {invalidPoints && <p role="alert" className="form-error">Chỉ dùng tối đa {maxPoints} điểm cho đơn này.</p>}
+            <button type="button" className="secondary-button" disabled={!rate} onClick={() => {setPoints(maxPoints);setQuote(null);setError("");}}>Dùng điểm tối đa</button>
             {quote && (
               <div className="quote-details" aria-live="polite">
                 <p>Giảm bằng điểm <strong>{formatVndPrice(quote.pointsDiscountAmount)}</strong></p>
-                <p>Thanh toán VNPay <strong>{formatVndPrice(quote.vnpayPayableAmount)}</strong></p>
+                <p>{quote.vnpayPayableAmount === 0 ? "Thanh toán hoàn toàn bằng điểm" : "Thanh toán VNPay"} <strong>{formatVndPrice(quote.vnpayPayableAmount)}</strong></p>
               </div>
             )}
-            <button type="button" className="secondary-button" onClick={() => void getQuote()}>
+            <button type="button" className="secondary-button" disabled={invalidPoints} onClick={() => void getQuote()}>
               Xem giá chính thức
             </button>
             <button
               type="button"
-              disabled={submitting || cart.items.some((item) => !item.productIsAvailable)}
+              disabled={invalidPoints || submitting || cart.items.some((item) => !item.productIsAvailable)}
               onClick={() => void createOrder()}
             >
-              {submitting ? "Đang tạo đơn…" : "Tạo đơn hàng"}
+              {submitting ? "Đang tạo đơn…" : quote ? "Xác nhận và tạo đơn" : "Xem giá trước khi đặt"}
             </button>
             <p className="muted small-note">
               Đơn chờ thanh toán tối đa 15 phút. Kho chưa bị trừ khi tạo đơn.

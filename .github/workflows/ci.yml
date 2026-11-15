@@ -75,6 +75,16 @@ jobs:
       - name: Build Web and API
         run: pnpm build 2>&1 | tee ci-logs/build.log
 
+      - name: Inventory integration tests on isolated PostgreSQL
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://brewlite:brewlite_test_only@localhost:5432/brewlite_inventory_test?schema=public
+          INVENTORY_TEST_DATABASE_URL: postgresql://brewlite:brewlite_test_only@localhost:5432/brewlite_inventory_test?schema=public
+        run: |
+          pnpm exec node --input-type=module -e 'import pg from "pg"; const c = new pg.Client({connectionString: process.env.DATABASE_URL.replace("/brewlite_inventory_test", "/postgres")}); await c.connect(); try { await c.query("CREATE DATABASE brewlite_inventory_test"); } finally { await c.end(); }'
+          pnpm exec prisma migrate deploy --config prisma7.config.ts
+          pnpm test:inventory 2>&1 | tee ../../ci-logs/inventory-test.log
+
       - name: Upload CI logs
         if: always()
         uses: actions/upload-artifact@v4

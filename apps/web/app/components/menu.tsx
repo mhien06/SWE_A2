@@ -42,9 +42,13 @@ export default function Menu() {
   return (
     <>
       <section className="menu-hero">
+        <div className="hero-copy">
         <span className="eyebrow">BREWLITE MENU</span>
-        <h1>Điều gì đó ngon lành đang chờ bạn.</h1>
+        <h1>Gu của bạn.<br /><em>Ngày của bạn.</em></h1>
         <p>Chọn món yêu thích và để BrewLite chuẩn bị một trải nghiệm trọn vị.</p>
+        <a className="hero-cta" href="#menu">Khám phá thực đơn <span aria-hidden="true">↗</span></a>
+        <div className="hero-note">✳ Pha theo gu · Nhận tại quầy</div>
+        </div>
       </section>
 
       <div className="category-row" aria-label="Danh mục">
@@ -54,7 +58,7 @@ export default function Menu() {
         <span>Sữa</span>
       </div>
 
-      <section className="menu-section">
+      <section className="menu-section" id="menu">
         <span className="eyebrow">OUR SELECTION</span>
         <h2>Menu của BrewLite</h2>
 

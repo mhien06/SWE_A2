@@ -13,7 +13,7 @@
 
 ## Decision
 
-1. **Cấu hình:** biến môi trường qua `ConfigModule`, validate lúc khởi động (thiếu/sai thì dừng). `.env.example` chỉ chứa tên biến và giá trị minh họa; Order TTL cố định 15 phút theo Task 5.1, Payment attempt TTL dùng `PAYMENT_ATTEMPT_TTL_MINUTES`.
+1. **Cấu hình:** biến môi trường qua `ConfigModule`, validate lúc khởi động (thiếu/sai thì dừng). `.env.example` chỉ chứa tên biến và giá trị minh họa (gồm `ORDER_PENDING_TTL_MINUTES`, `PAYMENT_ATTEMPT_TTL_MINUTES`).
 2. **Secret:** trong secret store của CI và nền tảng; không commit, không in ra log; che trường nhạy cảm.
 3. **Logging:** Pino, JSON ra stdout, có `correlationId`; ghi sự kiện đổi trạng thái đơn, kết quả IPN/QueryDR, giao dịch xử lý thanh toán và hủy đơn, hoàn kho, `EARN`/`REDEEM`/bù điểm; tra cứu được theo Order/Payment. Bảng `payment_event` lưu vết bền vững các sự kiện thanh toán và ngoại lệ.
 4. **Health:** `GET /health` (liveness, không phụ thuộc DB) và `GET /health/ready` (kiểm tra PostgreSQL) bằng `@nestjs/terminus`.

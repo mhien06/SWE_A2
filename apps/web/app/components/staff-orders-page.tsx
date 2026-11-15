@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatVndPrice } from "../catalog";
 import { apiFetch } from "../lib/api";
+import OrderAudit from "./order-audit";
 import { useAuthSession } from "./auth-session";
 
 type StaffOrder = {
@@ -21,6 +22,8 @@ type StaffOrder = {
   }>;
 };
 
+const statusLabels: Record<string,string> = { PAID:"Đã thanh toán", PREPARING:"Đang pha chế", READY_FOR_PICKUP:"Sẵn sàng nhận", COMPLETED:"Hoàn tất", CANCELLED:"Đã hủy", PENDING:"Chờ thanh toán", PAYMENT_FAILED:"Thanh toán thất bại", PAYMENT_EXCEPTION:"Cần đối soát" };
+
 const nextStatus: Record<string, string> = {
   PAID: "PREPARING",
   PREPARING: "READY_FOR_PICKUP",
@@ -29,6 +32,12 @@ const nextStatus: Record<string, string> = {
 
 export default function StaffOrdersPage() {
   const { session, ready } = useAuthSession();
+  const [lookup, setLookup] = useState("");
+  const [lookupId, setLookupId] = useState("");
+  const [review, setReview] = useState(false);
+  const [all, setAll] = useState(false);
+  const allowed = ready && !!session && ["STAFF", "MANAGER"].includes(session.user.role);
+  const path = review ? "/staff/orders?review=true" : all ? "/staff/orders?all=true" : "/staff/orders";
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -37,33 +46,30 @@ export default function StaffOrdersPage() {
 
   const loadOrders = useCallback(async () => {
     try {
-      setOrders(await apiFetch<StaffOrder[]>("/staff/orders"));
+      setOrders(await apiFetch<StaffOrder[]>(path));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không tải được danh sách đơn");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [path]);
 
   useEffect(() => {
-    if (!ready || !session) return;
+    if (!allowed) return;
     let active = true;
-    apiFetch<StaffOrder[]>("/staff/orders")
-      .then((result) => {
-        if (active) setOrders(result);
-      })
-      .catch((caught: unknown) => {
-        if (active) {
-          setError(caught instanceof Error ? caught.message : "Không tải được danh sách đơn");
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [ready, session]);
+    let pending = false;
+    async function refresh() {
+      if (pending) return;
+      pending = true;
+      try { const result = await apiFetch<StaffOrder[]>(path); if(active) {setOrders(result);} }
+      catch(e) { if(active)setError(e instanceof Error?e.message:"Không tải được danh sách đơn"); }
+      finally { pending=false; if(active)setLoading(false); }
+    }
+    void refresh();
+    const timer = window.setInterval(refresh,15000);
+    window.addEventListener("focus",refresh);
+    return ()=>{active=false;clearInterval(timer);window.removeEventListener("focus",refresh)};
+  }, [allowed, path]);
 
   async function changeStatus(order: StaffOrder) {
     const status = nextStatus[order.status];
@@ -92,10 +98,11 @@ export default function StaffOrdersPage() {
     setBusyId(order.id);
     setError("");
     try {
-      await apiFetch(`/staff/orders/${order.id}/cancel`, {
+      const result = await apiFetch<{pendingCancellation?:boolean;message?:string}>(`/staff/orders/${order.id}/cancel`, {
         method: "POST",
         body: JSON.stringify({ reason }),
       });
+      if (result.pendingCancellation) {setError(result.message ?? "Đang đối soát, đơn chưa hủy.");return;}
       await loadOrders();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không thể hủy đơn");
@@ -125,8 +132,9 @@ export default function StaffOrdersPage() {
   return (
     <section className="customer-page">
       <span className="eyebrow">STAFF OPERATIONS</span>
-      <h1>Đơn cần xử lý</h1>
+      <h1>{review ? "Giao dịch cần đối soát" : all ? "Lịch sử vận hành" : "Đơn cần xử lý"}</h1><div className="staff-actions"><button onClick={()=>setReview(!review)}>{review ? "Thoát bộ lọc đối soát" : "Giao dịch cần đối soát"}</button><button onClick={()=>{setAll(!all);setReview(false)}}>{all ? "Xem đơn cần xử lý" : "Xem 200 đơn gần nhất"}</button><button onClick={()=>void loadOrders()}>Làm mới</button></div>
       <p className="muted">Trạng thái chỉ được cập nhật khi backend xác nhận chuyển bước hợp lệ.</p>
+      <form className="staff-actions" onSubmit={e=>{e.preventDefault();setLookupId(lookup.trim())}}><label>Tra cứu mã đơn (UUID)<input required pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}" value={lookup} onChange={e=>setLookup(e.target.value)} /></label><button>Tra cứu</button></form>{lookupId&&<OrderAudit key={lookupId} orderId={lookupId}/>}
       {error && <p role="alert" className="form-error">{error}</p>}
       {orders.length === 0 ? (
         <div className="state-box">Hiện không có đơn cần xử lý.</div>
@@ -137,7 +145,7 @@ export default function StaffOrdersPage() {
               <div className="cart-item-heading">
                 <div>
                   <span className="eyebrow">{order.orderCode}</span>
-                  <h2>{order.status}</h2>
+                  <h2>{statusLabels[order.status] ?? order.status}</h2>
                   <p>{order.user.name} · {order.user.email}</p>
                 </div>
                 <strong>{formatVndPrice(order.vnpayPayableAmount)}</strong>
@@ -161,7 +169,7 @@ export default function StaffOrdersPage() {
                     >
                       {busyId === order.id
                         ? "Đang cập nhật…"
-                        : `Chuyển sang ${nextStatus[order.status]}`}
+                        : `Chuyển sang ${statusLabels[nextStatus[order.status]]}`}
                     </button>
                   )}
                   {order.status === "PAID" && (
@@ -191,6 +199,7 @@ export default function StaffOrdersPage() {
                   )}
                 </div>
               )}
+              <OrderAudit orderId={order.id} />
             </article>
           ))}
         </div>
