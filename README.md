@@ -20,6 +20,9 @@ Toàn bộ tạo phẩm của Task 1–3 được quản lý phiên bản trong 
 - [Task 2.3 – Domain Class Diagram](docs/diagrams/domain-class.md)
 - [Task 3.1 – Kiến trúc hệ thống và danh mục ADR (`001`–`011`)](docs/architecture/architecture.md)
 - [Task 3.2 – UML Deployment Diagram](docs/architecture/deployment.md)
+- [Ma trận truy vết FR/NFR/BR](docs/traceability-matrix.md)
+- [Hướng dẫn chạy và bàn giao](docs/deployment.md)
+- [Checklist nộp bài và minh chứng](docs/submission-checklist.md)
 
 ---
 
