@@ -304,7 +304,7 @@ JWT + `RolesGuard`; kiểm tra **sở hữu đơn** ở Service (NFR-02); `Valid
 
 ## 11. Điểm cần nhóm xác nhận khi review
 
-Chỉ gồm các điểm **thực sự chưa được chốt** (SRS §8, Domain Class §12, Sequence) và các đề xuất riêng của tài liệu này. `PAYMENT_EXCEPTION`, giao dịch tạo đơn và hủy đơn, thanh toán đến muộn và bù điểm đã được Task 1–2 chốt nên **không** nằm trong danh sách này.
+Chỉ gồm các điểm **thực sự chưa được chốt** (SRS §8, Domain Class §12, Sequence) và các đề xuất riêng của tài liệu này. `PAYMENT_EXCEPTION`, giao dịch tạo đơn hàng, xử lý kết quả thanh toán và hủy đơn hàng, thanh toán đến muộn và bù điểm đã được Task 1–2 chốt nên **không** nằm trong danh sách này.
 
 1. **Tỷ lệ tích điểm `EARN`** và quy tắc làm tròn (SRS §8, chưa chốt).
 2. **Thời hạn mỗi Payment attempt** (≤ hạn Order; nếu dùng 5 phút/lượt cần chốt) – biến `PAYMENT_ATTEMPT_TTL_MINUTES`.
@@ -340,4 +340,4 @@ Truy vết đầy đủ (FR → UC → sơ đồ → API → test) sẽ vào `do
 
 - **Task 2:** Sequence và Domain Class là căn cứ; nếu có khác biệt, SRS là căn cứ cuối (như tài liệu Sequence quy định). Tài liệu này không đổi tên trạng thái, thực thể hay loại giao dịch điểm.
 - **Task 3.2:** Deployment diagram tham chiếu các container ở mục 4.2 và quy tắc cấu hình ở mục 8.4.
-- **Task 4–5:** cấu trúc ở mục 12 và các transaction giao dịch tạo đơn và hủy đơn là cơ sở cho integration test (NFR-09).
+- **Task 4–5:** cấu trúc ở mục 12 và các giao dịch tạo đơn hàng, xử lý kết quả thanh toán và hủy đơn hàng là cơ sở cho integration test (NFR-09).
