@@ -20,7 +20,6 @@ Bản vẽ là **mục tiêu triển khai** cho SWE_A2, không phải bằng ch�
 
 - `docs/diagrams/sources/deployment-production.drawio` - nguồn draw.io chỉnh sửa được, 3 ranh giới rõ ràng.
 - `docs/diagrams/exports/deployment-production.svg` - bản xuất SVG dùng trong Markdown/báo cáo.
-- `docs/diagrams/exports/deployment-production.png` - ảnh xem nhanh.
 
 ![Deployment Diagram - BrewLite](../diagrams/exports/deployment-production.svg)
 
@@ -71,7 +70,7 @@ Task 3.1 dùng **15 phút** là hạn ORDER `PENDING`; mỗi payment attempt có
 - **Readiness:** `GET /health/ready` kiểm tra PostgreSQL; dùng sau deploy hoặc kiểm tra smoke test.
 - **Logs:** NestJS xuất structured JSON ra stdout, Render thu thập logs; không log mật khẩu/JWT/token/vnp_SecureHash. GitHub Actions lưu log build/check; Vercel có logs frontend.
 - **Migration:** Prisma Migrate; chạy migration phù hợp trước bản ứng dụng mới, có kế hoạch rollback (Task 5.3). Database production không public trực tiếp; dùng Internal Database URL ở backend (cùng region và khả dụng theo plan).
-- **Scheduler:** nằm trong tiến trình NestJS (không vẽ worker riêng). Xử lý đối soát `PENDING/UNKNOWN` bằng QueryDR, hết hạn đơn `PENDING` theo thời điểm (mỗi phút khi tiến trình hoạt động). Các transaction `TX1` tạo đơn, `TX2` nhận thanh toán, `TX3` hủy đơn đều ở NestJS/PostgreSQL, không thực hiện trong Vercel.
+- **Scheduler:** nằm trong tiến trình NestJS (không vẽ worker riêng). Xử lý đối soát `PENDING/UNKNOWN` bằng QueryDR, hết hạn đơn `PENDING` theo thời điểm (mỗi phút khi tiến trình hoạt động). Các transaction `TX1` (Tạo đơn), `TX2` (Xử lý kết quả thanh toán), `TX3` (Hủy đơn, hoàn nguyên liệu và điểm) đều ở NestJS/PostgreSQL, không thực hiện trong Vercel.
 - **Chính sách hủy/điểm:** giữ theo Task 3.1 của Khoa: hủy hợp lệ trước pha, hoàn nguyên liệu đúng một lần, điều chỉnh/bù điểm BrewLite theo SRS; **không biến deployment diagram thành mô hình tự động Refund VNPay** khi repo hiện chưa chốt triển khai đó.
 
 ## 7. Hạn chế gói miễn phí và biện pháp kiểm thử
