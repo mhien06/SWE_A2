@@ -1,0 +1,50 @@
+@startuml
+hide footbox
+skinparam monochrome true
+skinparam shadowing false
+actor Customer as C
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database Database as DB
+participant "VNPay Sandbox" as VN
+title Tạo đơn — kiểm tra dữ liệu và TX1
+C -> UI: Xác nhận giỏ, tùy chọn và số điểm muốn dùng
+activate UI
+UI -> API: Yêu cầu báo giá (JWT, giỏ, điểm)
+activate API
+API -> API: Kiểm JWT, quyền Customer
+alt Chưa xác thực / sai quyền
+API --> UI: Từ chối; không tạo Order
+else Đã xác thực
+API -> DB: Đọc giá, tùy chọn, recipe, nguyên liệu, điểm
+DB --> API: Dữ liệu chính thức tại server
+API -> API: Validate giỏ, tính lại giá, kiểm tra kho và điểm
+alt Giỏ / điểm sai hoặc nguyên liệu không đủ
+API --> UI: Báo lỗi; không tạo Order, không trừ kho / điểm
+else Hợp lệ
+API --> UI: Giá chính thức, giảm bằng điểm và tiền VNPay
+UI --> C: Hiển thị giá cuối cùng
+C -> UI: Xác nhận giá và tạo đơn
+UI -> API: POST /orders (JWT, giỏ, điểm, giá đã xác nhận)
+API -> DB: BEGIN TX1; khóa số dư điểm, đọc lại giá và kho
+API -> API: Kiểm tra lại quyền, dữ liệu và giá đã xác nhận
+alt Dữ liệu đã đổi / lỗi transaction
+API -> DB: ROLLBACK TX1
+API --> UI: Báo lỗi / yêu cầu xác nhận lại; không có đơn dang dở
+else Dữ liệu vẫn hợp lệ
+API -> DB: Lưu Order PENDING + OrderItem snapshot; hạn 15 phút
+opt Dùng điểm hợp lệ
+API -> DB: REDEEM + giảm số dư nguyên tử, không dùng vượt số dư
+end
+API -> DB: COMMIT TX1; không giữ hoặc trừ nguyên liệu
+API --> UI: orderId, PENDING, tổng tiền, expiresAt
+end
+end
+end
+deactivate API
+UI --> C: Hiển thị kết quả
+deactivate UI
+note over API, DB: Lỗi bất kỳ lệnh ghi/commit: rollback; không trả kết quả thành công.
+note over API, DB: Kho lúc tạo chỉ là kiểm tra; khi xác nhận PAID phải kiểm tra lại.
+note over API, DB: Đề xuất: REDEEM ở TX1; trả lại đúng một lần khi hủy / ngoại lệ kết thúc.
+@enduml

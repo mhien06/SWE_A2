@@ -1,0 +1,390 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductOptionType {
+  SIZE
+  TOPPING
+}
+
+enum MeasurementUnit {
+  GRAM
+  MILLILITER
+  UNIT
+}
+
+enum OrderStatus {
+  PENDING
+  PAYMENT_FAILED
+  PAYMENT_EXCEPTION
+  PAID
+  PREPARING
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  UNKNOWN
+  EXPIRED
+}
+
+enum PaymentProvider {
+  VNPAY_SANDBOX
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  UNKNOWN
+}
+
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+  RETURN_REDEEMED
+  REVERSE_EARNED
+  VNPAY_COMPENSATION
+  ADJUST
+}
+
+model User {
+  id                         String                      @id @default(uuid()) @db.Uuid
+  name                       String
+  email                      String                      @unique
+  passwordHash               String
+  role                       UserRole                    @default(CUSTOMER)
+  status                     UserStatus                  @default(ACTIVE)
+  pointsBalance              Int                         @default(0)
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  cart                       Cart?
+  orders                     Order[]
+  loyalty                    LoyaltyTransaction[]
+  cancellations              OrderCancellation[]
+  productChanges             ProductChange[]
+  orderStatusChanges         OrderStatusChange[]
+  recipeChanges              Recipe[]
+  inventoryAdjustments       InventoryAdjustment[]
+  productAvailabilityChanges ProductAvailabilityChange[]
+}
+
+model Cart {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @unique @db.Uuid
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  cartId             String   @db.Uuid
+  productId          String   @db.Uuid
+  selectedSize       String
+  selectedToppings   String[] @default([])
+  quantity           Int
+  estimatedUnitPrice Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  cart               Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([cartId])
+}
+
+model Product {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  name                String
+  description         String
+  basePrice           Decimal                     @db.Decimal(12, 2)
+  isAvailable         Boolean                     @default(true)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  options             ProductOption[]
+  recipes             Recipe[]
+  cartItems           CartItem[]
+  orderItems          OrderItem[]
+  changes             ProductChange[]
+  availabilityChanges ProductAvailabilityChange[]
+}
+
+model ProductOption {
+  id              String            @id @default(uuid()) @db.Uuid
+  productId       String            @db.Uuid
+  type            ProductOptionType
+  name            String
+  additionalPrice Decimal           @db.Decimal(12, 2)
+  isAvailable     Boolean           @default(true)
+  product         Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipes         Recipe[]
+
+  @@unique([productId, type, name])
+  @@index([productId, type])
+}
+
+model ProductAvailabilityChange {
+  id          String   @id @default(uuid()) @db.Uuid
+  productId   String   @db.Uuid
+  actorUserId String   @db.Uuid
+  isAvailable Boolean
+  reason      String
+  changedAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([productId, changedAt])
+}
+
+model Ingredient {
+  id             String                 @id @default(uuid()) @db.Uuid
+  name           String                 @unique
+  unit           MeasurementUnit
+  quantityOnHand Decimal                @default(0) @db.Decimal(12, 3)
+  reorderLevel   Decimal                @default(0) @db.Decimal(12, 3)
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  recipeItems    RecipeIngredient[]
+  orderUsages    OrderIngredientUsage[]
+  adjustments    InventoryAdjustment[]
+}
+
+model Recipe {
+  createdByUserId String? @db.Uuid
+  createdBy User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  id              String             @id @default(uuid()) @db.Uuid
+  productId       String             @db.Uuid
+  productOptionId String?            @db.Uuid
+  version         Int                @default(1)
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  product         Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productOption   ProductOption?     @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
+  ingredients     RecipeIngredient[]
+
+  @@index([productId, productOptionId, isActive])
+}
+
+model RecipeIngredient {
+  id           String          @id @default(uuid()) @db.Uuid
+  recipeId     String          @db.Uuid
+  ingredientId String          @db.Uuid
+  quantity     Decimal         @db.Decimal(12, 3)
+  unit         MeasurementUnit
+  recipe       Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient      @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
+}
+
+model Order {
+  id                   String               @id @default(uuid()) @db.Uuid
+  orderCode            String               @unique
+  userId               String               @db.Uuid
+  status               OrderStatus          @default(PENDING)
+  subtotal             Int
+  discountAmount       Int                  @default(0)
+  totalAmount          Int
+  pointsRedeemed       Int                  @default(0)
+  pointsDiscountAmount Int                  @default(0)
+  vnpayPayableAmount   Int
+  createdAt            DateTime             @default(now())
+  expiresAt            DateTime
+  updatedAt            DateTime             @updatedAt
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items                OrderItem[]
+  payments             Payment[]
+  cancellation         OrderCancellation?
+  loyaltyTransactions  LoyaltyTransaction[]
+  statusChanges        OrderStatusChange[]
+  paymentEvents        PaymentEvent[]
+
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+}
+
+model OrderItem {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  orderId                  String                 @db.Uuid
+  productId                String                 @db.Uuid
+  productNameSnapshot      String
+  selectedSizeSnapshot     String
+  selectedToppingsSnapshot String[]
+  unitPriceSnapshot        Int
+  quantity                 Int
+  lineTotal                Int
+  order                    Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                  Product                @relation(fields: [productId], references: [id], onDelete: Restrict)
+  ingredientUsages         OrderIngredientUsage[]
+
+  @@index([orderId])
+}
+
+model OrderIngredientUsage {
+  id                     String          @id @default(uuid()) @db.Uuid
+  orderItemId            String          @db.Uuid
+  ingredientId           String          @db.Uuid
+  ingredientNameSnapshot String
+  quantityDeducted       Decimal         @db.Decimal(12, 3)
+  quantityRestored       Decimal         @default(0) @db.Decimal(12, 3)
+  unitSnapshot           MeasurementUnit
+  deductedAt             DateTime        @default(now())
+  restoredAt             DateTime?
+  restoreIdempotencyKey  String?         @unique
+  orderItem              OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  ingredient             Ingredient      @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([orderItemId])
+}
+
+model InventoryAdjustment {
+  id            String     @id @default(uuid()) @db.Uuid
+  ingredientId  String     @db.Uuid
+  actorUserId   String     @db.Uuid
+  quantityDelta Decimal    @db.Decimal(12, 3)
+  reason        String
+  createdAt     DateTime   @default(now())
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  actor         User       @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([ingredientId, createdAt])
+}
+
+model Payment {
+  id                    String               @id @default(uuid()) @db.Uuid
+  orderId               String               @db.Uuid
+  provider              PaymentProvider      @default(VNPAY_SANDBOX)
+  status                PaymentStatus        @default(PENDING)
+  amount                Int
+  transactionRef        String               @unique
+  idempotencyKey        String               @unique
+  payloadHash           String
+  paymentUrl            String
+  providerTransactionNo String?
+  responseCode          String?
+  transactionStatus     String?
+  bankCode              String?
+  payDate               String?
+  createdAt             DateTime             @default(now())
+  expiresAt             DateTime
+  verifiedAt            DateTime?
+  nextQueryAt           DateTime
+  queryAttempts         Int                  @default(0)
+  reviewRequired        Boolean              @default(false)
+  settlementSource      String?
+  order                 Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refundRecords         VNPayRefundRecord[]
+  loyaltyTransactions   LoyaltyTransaction[]
+  events                PaymentEvent[]
+
+  @@index([orderId, createdAt])
+  @@index([status, nextQueryAt])
+}
+
+model VNPayRefundRecord {
+  id                String       @id @default(uuid()) @db.Uuid
+  paymentId         String       @db.Uuid
+  amount            Int
+  status            RefundStatus @default(PENDING)
+  providerRefundRef String?
+  requestedAt       DateTime     @default(now())
+  resolvedAt        DateTime?
+  payment           Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, status])
+}
+
+model PaymentEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  paymentId String   @db.Uuid
+  orderId   String   @db.Uuid
+  eventType String
+  source    String
+  details   Json
+  createdAt DateTime @default(now())
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, createdAt])
+  @@index([orderId, createdAt])
+}
+
+model OrderCancellation {
+  id                String   @id @default(uuid()) @db.Uuid
+  orderId           String   @unique @db.Uuid
+  cancelledByUserId String?  @db.Uuid
+  cancelledByRole   String?
+  reason            String?
+  isAutomatic       Boolean  @default(false)
+  idempotencyKey    String   @unique
+  cancelledAt       DateTime @default(now())
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cancelledBy       User?    @relation(fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+}
+
+model LoyaltyTransaction {
+  id             String                 @id @default(uuid()) @db.Uuid
+  userId         String                 @db.Uuid
+  orderId        String?                @db.Uuid
+  paymentId      String?                @db.Uuid
+  type           LoyaltyTransactionType
+  points         Int
+  valueVnd       Int?
+  idempotencyKey String                 @unique
+  createdAt      DateTime               @default(now())
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order          Order?                 @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payment        Payment?               @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@unique([paymentId, type])
+  @@index([userId, createdAt])
+  @@index([orderId, type])
+}
+
+model ProductChange {
+  id String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  actorUserId String @db.Uuid
+  reason String
+  product Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  before Json?
+  after Json
+  createdAt DateTime @default(now())
+  @@index([productId, createdAt])
+}
+model OrderStatusChange {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  actorUserId String @db.Uuid
+  order Order @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fromStatus OrderStatus
+  toStatus OrderStatus
+  createdAt DateTime @default(now())
+  @@index([orderId, createdAt])
+}

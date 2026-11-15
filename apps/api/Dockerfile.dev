@@ -1,0 +1,12 @@
+FROM node:24-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates procps && rm -rf /var/lib/apt/lists/*
+RUN npm install --global pnpm@11.25.0
+WORKDIR /workspace
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/package.json
+COPY apps/web/package.json ./apps/web/package.json
+RUN --mount=type=cache,id=swe-a2-pnpm,target=/pnpm/store,sharing=locked pnpm install --frozen-lockfile --store-dir=/pnpm/store --fetch-timeout=600000 --network-concurrency=8
+COPY apps/api ./apps/api
+WORKDIR /workspace/apps/api
+EXPOSE 3001
+CMD ["pnpm", "dev"]

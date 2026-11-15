@@ -1,0 +1,57 @@
+@startuml
+hide footbox
+skinparam monochrome true
+skinparam shadowing false
+actor Customer as C
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database Database as DB
+participant "VNPay Sandbox" as VN
+title Checkout — tổng quan
+C -> UI: Xác nhận giỏ và giá cuối cùng
+activate UI
+UI -> API: Tạo Order (JWT, giỏ, điểm tùy chọn)
+activate API
+ref over UI, DB: sequence-create-order: validate và TX1
+API --> UI: Order PENDING, tổng tiền, expiresAt
+deactivate API
+UI --> C: Hiển thị đơn; chưa trừ nguyên liệu
+C -> UI: Chọn thanh toán
+UI -> API: Tạo Payment (Idempotency-Key)
+activate API
+ref over UI, VN: sequence-payment-vnpay: kiểm tra attempt, ký URL
+API --> UI: URL hợp lệ / lỗi / đang xác minh
+deactivate API
+opt Có URL hợp lệ
+UI -> VN: Điều hướng tới URL đã ký
+deactivate UI
+C -> VN: Thực hiện thanh toán thử nghiệm
+VN -> API: IPN (độc lập Return URL)
+activate API
+ref over API, VN: sequence-payment-vnpay: xác minh, TX2, đối soát
+API --> VN: Phản hồi theo kết quả xử lý đã lưu
+deactivate API
+VN --> UI: Return URL tùy chọn
+end
+activate UI
+UI -> API: GET Order và Payment (JWT, kiểm tra sở hữu)
+activate API
+API -> DB: Đọc trạng thái đã lưu
+DB --> API: Order.status và Payment.status riêng
+API --> UI: Order PAID / PAYMENT_FAILED / PENDING; Payment tương ứng
+deactivate API
+UI --> C: Hiển thị trạng thái backend; không tin Return URL
+deactivate UI
+opt Customer yêu cầu hủy trước khi pha
+C -> UI: Hủy đơn của mình
+activate UI
+UI -> API: Hủy đơn (JWT, key)
+activate API
+ref over UI, DB: sequence-cancel-order: quyền, khóa, hoàn kho và điểm
+API --> UI: Kết quả hủy / từ chối / chờ đối soát
+deactivate API
+UI --> C: Hiển thị kết quả đã lưu
+deactivate UI
+end
+note over UI, VN: Return URL và IPN có thể đến theo bất kỳ thứ tự nào.
+@enduml

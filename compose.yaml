@@ -1,0 +1,84 @@
+name: swe-a2-dev
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-brewlite}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brewlite_local}
+      POSTGRES_DB: ${POSTGRES_DB:-brewlite_dev}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      PORT: "3001"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-brewlite}:${POSTGRES_PASSWORD:-brewlite_local}@postgres:5432/${POSTGRES_DB:-brewlite_dev}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-replace-with-local-dev-jwt-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PAYMENT_ATTEMPT_TTL_MINUTES: ${PAYMENT_ATTEMPT_TTL_MINUTES:-15}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      VNP_TMN_CODE: ${VNP_TMN_CODE:-}
+      VNP_HASH_SECRET: ${VNP_HASH_SECRET:-}
+      VNP_PAY_URL: ${VNP_PAY_URL:-}
+      VNP_API_URL: ${VNP_API_URL:-}
+      VNP_RETURN_URL: ${VNP_RETURN_URL:-}
+      LOYALTY_EARN_POINTS_PER_VND: ${LOYALTY_EARN_POINTS_PER_VND:-}
+      LOYALTY_EARN_ROUNDING: ${LOYALTY_EARN_ROUNDING:-}
+      LOYALTY_REDEEM_VND_PER_POINT: ${LOYALTY_REDEEM_VND_PER_POINT:-}
+      SEED_MANAGER_EMAIL: ${SEED_MANAGER_EMAIL:-}
+      SEED_MANAGER_PASSWORD: ${SEED_MANAGER_PASSWORD:-}
+      TSC_WATCHFILE: DynamicPriorityPolling
+      TSC_WATCHDIRECTORY: RecursiveDirectoryUsingDynamicPriorityPolling
+    ports:
+      - "127.0.0.1:${API_PORT:-3001}:3001"
+    volumes:
+      - ./apps/api/src:/workspace/apps/api/src:ro
+      - ./apps/api/prisma:/workspace/apps/api/prisma:ro
+      - ./apps/api/prisma7.config.ts:/workspace/apps/api/prisma7.config.ts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3001').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-3001}
+      API_INTERNAL_URL: http://api:3001
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./apps/web/app:/workspace/apps/web/app:ro
+      - ./apps/web/public:/workspace/apps/web/public:ro
+      - ./apps/web/next.config.ts:/workspace/apps/web/next.config.ts:ro
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      start_period: 120s
+      retries: 12
+
+volumes:
+  postgres_data:
