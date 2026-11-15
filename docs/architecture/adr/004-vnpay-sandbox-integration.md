@@ -16,7 +16,7 @@
 2. Kết quả chỉ được công nhận khi **xác minh chữ ký, `transactionRef`, số tiền (= `vnpayPayableAmount`), mã kết quả**.
 3. **Return URL chỉ để hiển thị**: không đổi trạng thái Order/Payment; Web App đọc trạng thái từ API.
 4. Mỗi lần thanh toán là một `Payment` (attempt) với `transactionRef` duy nhất, `idempotencyKey`, `expiresAt ≤ Order.expiresAt`; trạng thái `PENDING`, `SUCCEEDED`, `FAILED`, `UNKNOWN`, `EXPIRED`.
-5. IPN và QueryDR dùng **chung một hàm TX2** (ADR-006); QueryDR gọi ngoài transaction giữ khóa.
+5. IPN và QueryDR dùng **chung một hàm giao dịch xử lý kết quả thanh toán** (ADR-006); QueryDR gọi ngoài transaction giữ khóa.
 6. Sự kiện IPN/QueryDR ghi vào `payment_event`; không lưu số thẻ, CVV hay thông tin ngân hàng.
 7. `VNP_HASH_SECRET`, `VNP_TMN_CODE` chỉ đọc từ biến môi trường.
 
