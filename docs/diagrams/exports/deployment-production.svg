@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" baseProfile="full" viewBox="0 0 2200 1350" width="2200px" height="1350px" style="background-color: #FFFFFF; color-scheme: light;">
+<defs>
+<style type="text/css">
+
+  :root { color-scheme: light only; }
+  svg { background-color: #FFFFFF !important; color-scheme: light !important; }
+  text { font-family: "DejaVu Sans", Arial, Helvetica, sans-serif; }
+
+</style>
+</defs>
+<rect x="0" y="0" width="2200" height="1350" fill="#FFFFFF" />
+<rect x="50" y="162" width="455" height="1005" rx="16" ry="16" fill="#FFFFFF" stroke="#000000" stroke-width="2" stroke-dasharray="10 6" />
+<rect x="73" y="182" width="409" height="57" rx="11" ry="11" fill="#FFFFFF" stroke="#000000" stroke-width="1.6" />
+<text x="96" y="219" fill="#000000" font-size="21" font-weight="700" text-anchor="start">LOCAL  /  DEVELOPMENT</text>
+<rect x="535" y="162" width="540" height="1005" rx="16" ry="16" fill="#FFFFFF" stroke="#000000" stroke-width="2" stroke-dasharray="10 6" />
+<rect x="558" y="182" width="494" height="57" rx="11" ry="11" fill="#FFFFFF" stroke="#000000" stroke-width="1.6" />
+<text x="581" y="219" fill="#000000" font-size="21" font-weight="700" text-anchor="start">CI  /  AUTOMATION</text>
+<rect x="1105" y="162" width="1045" height="1005" rx="16" ry="16" fill="#FFFFFF" stroke="#000000" stroke-width="2" stroke-dasharray="10 6" />
+<rect x="1128" y="182" width="999" height="57" rx="11" ry="11" fill="#FFFFFF" stroke="#000000" stroke-width="1.6" />
+<text x="1151" y="219" fill="#000000" font-size="21" font-weight="700" text-anchor="start">CLOUD DEPLOYMENT  +  EXTERNAL</text>
+<polyline points="480.0,375.0 585.0,375.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-linejoin="round" />
+<polygon points="585.0,375.0 573.0,380.6 573.0,369.4" fill="#000000" />
+<text x="531" y="352" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">push / HTTPS 443</text>
+<polyline points="1380.0,390.0 1410.0,390.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-linejoin="round" />
+<polygon points="1410.0,390.0 1398.0,395.6 1398.0,384.4" fill="#000000" />
+<text x="1395" y="270" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">HTTPS 443</text>
+<polyline points="1715.0,395.0 1760.0,395.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-linejoin="round" />
+<polygon points="1760.0,395.0 1748.0,400.6 1748.0,389.4" fill="#000000" />
+<text x="1738" y="235" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">REST/JWT · HTTPS 443</text>
+<polyline points="1935.0,535.0 1935.0,695.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-linejoin="round" />
+<polygon points="1935.0,695.0 1929.3,683.0 1940.7,683.0" fill="#000000" />
+<text x="1950" y="615" fill="#000000" font-size="14" font-weight="700" text-anchor="start">private TCP 5432</text>
+<polyline points="1760.0,480.0 1780.0,480.0 1780.0,580.0 1650.0,580.0 1650.0,704.0 1685.0,704.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-linejoin="round" />
+<polygon points="1685.0,704.0 1673.0,709.6 1673.0,698.4" fill="#000000" />
+<text x="1715" y="568" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">QueryDR  HTTPS 443</text>
+<polyline points="1715.0,757.0 1715.0,730.0 1560.0,730.0 1560.0,520.0 1760.0,520.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-dasharray="8 5" stroke-linejoin="round" />
+<polygon points="1760.0,520.0 1748.0,525.6 1748.0,514.4" fill="#000000" />
+<text x="1660" y="508" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">IPN  HTTPS 443</text>
+<polyline points="1282.0,470.0 1282.0,802.0 1430.0,802.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-linejoin="round" />
+<polygon points="1430.0,802.0 1418.0,807.6 1418.0,796.4" fill="#000000" />
+<text x="1160" y="670" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">VNPay redirect / return  HTTPS 443</text>
+<polyline points="1055.0,612.0 1130.0,612.0 1130.0,640.0 1815.0,640.0 1815.0,535.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-dasharray="8 5" stroke-linejoin="round" />
+<polygon points="1815.0,535.0 1820.7,547.0 1809.3,547.0" fill="#000000" />
+<text x="1472" y="628" fill="#000000" font-size="14" font-weight="700" text-anchor="middle">Build / deploy from Git repo</text>
+<polyline points="1055.0,930.0 1100.0,930.0" fill="none" stroke="#000000" stroke-width="2.5" stroke-dasharray="8 5" stroke-linejoin="round" />
+<polygon points="1100.0,930.0 1088.0,935.6 1088.0,924.4" fill="#000000" />
+<rect x="90" y="290" width="380" height="170" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="107" y="325" fill="#333333" font-size="14">&lt;&lt;device&gt;&gt;</text>
+<text x="107" y="359" fill="#000000" font-size="20" font-weight="700">Developer laptop</text>
+<text x="107" y="392" fill="#111111" font-size="15">Windows / macOS / Linux</text>
+<text x="107" y="420" fill="#111111" font-size="15">Git + Docker Desktop</text>
+<text x="107" y="448" fill="#111111" font-size="15">Workspace: SWE_A2</text>
+<rect x="90" y="520" width="380" height="300" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="107" y="555" fill="#333333" font-size="14">&lt;&lt;executionEnvironment&gt;&gt;</text>
+<text x="107" y="589" fill="#000000" font-size="20" font-weight="700">Docker Compose (local)</text>
+<text x="107" y="622" fill="#111111" font-size="15">web :3000  |  api :3001</text>
+<text x="107" y="650" fill="#111111" font-size="15">PostgreSQL :5432  |  volume</text>
+<text x="107" y="678" fill="#111111" font-size="15">Seed + Prisma migrations</text>
+<text x="107" y="706" fill="#111111" font-size="15">Local only; not Internet public</text>
+<rect x="90" y="875" width="380" height="150" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="107" y="910" fill="#333333" font-size="14">&lt;&lt;artifact&gt;&gt;</text>
+<text x="107" y="944" fill="#000000" font-size="20" font-weight="700">Local verification</text>
+<text x="107" y="977" fill="#111111" font-size="15">API tests / UI tests</text>
+<text x="107" y="1005" fill="#111111" font-size="15">Checkout + VNPay Sandbox demo</text>
+<rect x="585" y="290" width="470" height="172" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="602" y="325" fill="#333333" font-size="14">&lt;&lt;repository&gt;&gt;</text>
+<text x="602" y="359" fill="#000000" font-size="20" font-weight="700">GitHub: mhien06/SWE_A2</text>
+<text x="602" y="392" fill="#111111" font-size="15">branches: develop / main</text>
+<text x="602" y="420" fill="#111111" font-size="15">PR + review + version history</text>
+<rect x="585" y="510" width="470" height="255" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="602" y="545" fill="#333333" font-size="14">&lt;&lt;executionEnvironment&gt;&gt;</text>
+<text x="602" y="579" fill="#000000" font-size="20" font-weight="700">GitHub Actions  (planned)</text>
+<text x="602" y="612" fill="#111111" font-size="15">Install → Lint → Unit Test → Build</text>
+<text x="602" y="640" fill="#111111" font-size="15">Docker image: tag = commit SHA</text>
+<text x="602" y="668" fill="#111111" font-size="15">CI quality gate on pull request</text>
+<text x="602" y="696" fill="#111111" font-size="15">Secrets held in Actions (not in code)</text>
+<rect x="585" y="830" width="470" height="190" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="602" y="865" fill="#333333" font-size="14">&lt;&lt;registry&gt;&gt;</text>
+<text x="602" y="899" fill="#000000" font-size="20" font-weight="700">GHCR container registry</text>
+<text x="602" y="932" fill="#111111" font-size="15">Public image: optional proposal</text>
+<text x="602" y="960" fill="#111111" font-size="15">Only if image-backed deploy is adopted</text>
+<text x="602" y="988" fill="#111111" font-size="15">Render can build Dockerfile directly</text>
+<rect x="1160" y="300" width="220" height="180" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="1177" y="335" fill="#333333" font-size="14">&lt;&lt;device&gt;&gt;</text>
+<text x="1177" y="369" fill="#000000" font-size="20" font-weight="700">Browser / PWA</text>
+<text x="1177" y="402" fill="#111111" font-size="15">Customer / Staff</text>
+<text x="1177" y="430" fill="#111111" font-size="15">Manager / PWA</text>
+<rect x="1410" y="288" width="305" height="205" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="1427" y="323" fill="#333333" font-size="14">&lt;&lt;executionEnvironment&gt;&gt;</text>
+<text x="1427" y="357" fill="#000000" font-size="20" font-weight="700">Vercel Hobby</text>
+<text x="1427" y="390" fill="#111111" font-size="15">Next.js web / CDN</text>
+<text x="1427" y="418" fill="#111111" font-size="15">HTTPS TLS at platform edge</text>
+<text x="1427" y="446" fill="#111111" font-size="15">FRONTEND: planned for SWE_A2</text>
+<rect x="1760" y="268" width="350" height="267" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="1777" y="303" fill="#333333" font-size="14">&lt;&lt;executionEnvironment&gt;&gt;</text>
+<text x="1777" y="337" fill="#000000" font-size="20" font-weight="700">Render Free Web Service</text>
+<text x="1777" y="370" fill="#111111" font-size="15">NestJS modular monolith</text>
+<text x="1777" y="398" fill="#111111" font-size="15">Docker (Git-backed build)</text>
+<text x="1777" y="426" fill="#111111" font-size="15">Scheduler + HealthModule</text>
+<text x="1777" y="454" fill="#111111" font-size="15">Logs → stdout / Render logs</text>
+<text x="1777" y="482" fill="#111111" font-size="15">bind 0.0.0.0:$PORT</text>
+<rect x="1430" y="694" width="285" height="176" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" stroke-dasharray="6 4" />
+<text x="1447" y="729" fill="#333333" font-size="14">&lt;&lt;external service&gt;&gt;</text>
+<text x="1447" y="763" fill="#000000" font-size="20" font-weight="700">VNPay Sandbox</text>
+<text x="1447" y="796" fill="#111111" font-size="15">Payment URL / Return URL</text>
+<text x="1447" y="824" fill="#111111" font-size="15">Server-to-server IPN + QueryDR</text>
+<text x="1447" y="852" fill="#111111" font-size="15">External to BrewLite</text>
+<rect x="1760" y="690" width="350" height="217" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="1777" y="725" fill="#333333" font-size="14">&lt;&lt;database&gt;&gt;</text>
+<text x="1777" y="759" fill="#000000" font-size="20" font-weight="700">Render PostgreSQL Free</text>
+<text x="1777" y="792" fill="#111111" font-size="15">persistent managed datastore</text>
+<text x="1777" y="820" fill="#111111" font-size="15">Internal DB endpoint / TCP 5432</text>
+<text x="1777" y="848" fill="#111111" font-size="15">Prisma migrate / app data</text>
+<text x="1777" y="876" fill="#111111" font-size="15">Free tier: database expires in 30 days</text>
+<rect x="1180" y="925" width="930" height="220" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="2" />
+<text x="1197" y="960" fill="#333333" font-size="14">&lt;&lt;security / operations&gt;&gt;</text>
+<text x="1197" y="994" fill="#000000" font-size="20" font-weight="700">Secrets / health / logs</text>
+<text x="1197" y="1027" fill="#111111" font-size="15">Vercel env: public API URL only</text>
+<text x="1197" y="1055" fill="#111111" font-size="15">Render env: JWT, VNP_*, DATABASE_URL</text>
+<text x="1197" y="1083" fill="#111111" font-size="15">GET /health · GET /health/ready</text>
+<text x="1197" y="1111" fill="#111111" font-size="15">Render runtime logs; no secret values</text>
+<text x="57" y="75" fill="#000000" font-size="34" font-weight="700">BrewLite  /  Assignment 2</text>
+<text x="57" y="119" fill="#333333" font-size="20">TASK 3.2  •  UML Deployment Diagram  •  Target architecture (not yet production-verified)</text>
+<rect x="1665" y="40" width="485" height="80" rx="10" ry="10" fill="#FFFFFF" stroke="#000000" stroke-width="1.5" />
+<text x="1690" y="77" fill="#000000" font-size="16" font-weight="700">STACK: Next.js · NestJS · PostgreSQL</text>
+<text x="1690" y="106" fill="#333333" font-size="17">Vercel Hobby  +  Render Free</text>
+<text x="58" y="1226" fill="#000000" font-size="17" font-weight="700">NOTES</text>
+<text x="58" y="1265" fill="#222222" font-size="16">Free tier may sleep/expire: periodic jobs and VNPay IPN are NOT guaranteed to be continuously available.</text>
+<text x="58" y="1297" fill="#444444" font-size="16">GHCR and deployment automation are planned options; this drawing does not claim they are running in SWE_A2.</text>
+</svg>

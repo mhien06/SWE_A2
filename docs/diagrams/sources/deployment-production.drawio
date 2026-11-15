@@ -1,0 +1,144 @@
+<mxfile host="app.diagrams.net" agent="Task 3.2 BrewLite - generated editable diagram">
+  <diagram name="Deployment Production - BrewLite" id="brewlite-deploy">
+    <mxGraphModel dx="1671" dy="860" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1350" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=16;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;dashed=1;dashPattern=9 6;labelBackgroundColor=none;" value="" vertex="1">
+          <mxGeometry height="1005" width="455" x="50" y="162" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=16;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;dashed=1;dashPattern=9 6;labelBackgroundColor=none;" value="" vertex="1">
+          <mxGeometry height="1005" width="540" x="535" y="162" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=16;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;dashed=1;dashPattern=9 6;labelBackgroundColor=none;" value="" vertex="1">
+          <mxGeometry height="1005" width="1045" x="1105" y="162" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;labelBackgroundColor=none;fontColor=default;" value="push / HTTPS 443">
+          <mxGeometry relative="1" x="-0.0476" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="480" y="375" as="sourcePoint" />
+            <mxPoint x="585" y="375" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;labelBackgroundColor=none;fontColor=default;" value="HTTPS 443">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1380" y="390" as="sourcePoint" />
+            <mxPoint x="1410" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;labelBackgroundColor=none;fontColor=default;" value="REST/JWT · HTTPS 443">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1715" y="395" as="sourcePoint" />
+            <mxPoint x="1760" y="395" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;labelBackgroundColor=none;fontColor=default;" value="private TCP 5432">
+          <mxGeometry relative="1" x="0.0625" y="45" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="1935" y="535" as="sourcePoint" />
+            <mxPoint x="1935" y="695" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;labelBackgroundColor=none;fontColor=default;" value="QueryDR  HTTPS 443">
+          <mxGeometry relative="1" x="0.0758" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1780" y="480" />
+              <mxPoint x="1780" y="580" />
+              <mxPoint x="1650" y="580" />
+              <mxPoint x="1650" y="704" />
+            </Array>
+            <mxPoint x="1760" y="480" as="sourcePoint" />
+            <mxPoint x="1685" y="704" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;dashed=1;dashPattern=8 5;labelBackgroundColor=none;fontColor=default;" value="IPN  HTTPS 443">
+          <mxGeometry relative="1" x="0.0203" y="50" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1715" y="730" />
+              <mxPoint x="1560" y="730" />
+              <mxPoint x="1560" y="520" />
+            </Array>
+            <mxPoint x="1715" y="757" as="sourcePoint" />
+            <mxPoint x="1760" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;labelBackgroundColor=none;fontColor=default;" value="VNPay redirect / return  HTTPS 443">
+          <mxGeometry relative="1" x="-0.1667" y="98" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1282" y="802" />
+            </Array>
+            <mxPoint x="1282" y="470" as="sourcePoint" />
+            <mxPoint x="1430" y="802" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;dashed=1;dashPattern=8 5;labelBackgroundColor=none;fontColor=default;" value="Build / deploy from Git repo">
+          <mxGeometry relative="1" x="-0.2318" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1130" y="612" />
+              <mxPoint x="1130" y="640" />
+              <mxPoint x="1815" y="640" />
+            </Array>
+            <mxPoint x="1055" y="612" as="sourcePoint" />
+            <mxPoint x="1815" y="535" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.5;dashed=1;dashPattern=8 5;labelBackgroundColor=none;fontColor=default;entryX=0.005;entryY=0.774;entryDx=0;entryDy=0;entryPerimeter=0;" target="b3" value="Image registry: OPTIONAL for Render Git-backed">
+          <mxGeometry relative="1" x="1" y="85" as="geometry">
+            <mxPoint x="80" y="55" as="offset" />
+            <Array as="points">
+              <mxPoint x="1060" y="940" />
+            </Array>
+            <mxPoint x="1060" y="930" as="sourcePoint" />
+            <mxPoint x="1105" y="930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="b13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;device&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Developer laptop&lt;/b&gt;&lt;br&gt;Windows / macOS / Linux&lt;br&gt;Git + Docker Desktop&lt;br&gt;Workspace: SWE_A2" vertex="1">
+          <mxGeometry height="170" width="380" x="90" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="b14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;executionEnvironment&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Docker Compose (local)&lt;/b&gt;&lt;br&gt;web :3000  |  api :3001&lt;br&gt;PostgreSQL :5432  |  volume&lt;br&gt;Seed + Prisma migrations&lt;br&gt;Local only; not Internet public" vertex="1">
+          <mxGeometry height="300" width="380" x="90" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="b15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;artifact&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Local verification&lt;/b&gt;&lt;br&gt;API tests / UI tests&lt;br&gt;Checkout + VNPay Sandbox demo" vertex="1">
+          <mxGeometry height="150" width="380" x="90" y="875" as="geometry" />
+        </mxCell>
+        <mxCell id="b16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;repository&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;GitHub: mhien06/SWE_A2&lt;/b&gt;&lt;br&gt;branches: develop / main&lt;br&gt;PR + review + version history" vertex="1">
+          <mxGeometry height="172" width="470" x="585" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="b17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;executionEnvironment&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;GitHub Actions  (planned)&lt;/b&gt;&lt;br&gt;Install → Lint → Unit Test → Build&lt;br&gt;Docker image: tag = commit SHA&lt;br&gt;CI quality gate on pull request&lt;br&gt;Secrets held in Actions (not in code)" vertex="1">
+          <mxGeometry height="255" width="470" x="585" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="b18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;registry&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;GHCR container registry&lt;/b&gt;&lt;br&gt;Public image: optional proposal&lt;br&gt;Only if image-backed deploy is adopted&lt;br&gt;Render can build Dockerfile directly" vertex="1">
+          <mxGeometry height="190" width="470" x="585" y="830" as="geometry" />
+        </mxCell>
+        <mxCell id="b19" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;device&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Browser / PWA&lt;/b&gt;&lt;br&gt;Customer / Staff&lt;br&gt;Manager / PWA" vertex="1">
+          <mxGeometry height="180" width="220" x="1160" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="b20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;executionEnvironment&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Vercel Hobby&lt;/b&gt;&lt;br&gt;Next.js web / CDN&lt;br&gt;HTTPS TLS at platform edge&lt;br&gt;FRONTEND: planned for SWE_A2" vertex="1">
+          <mxGeometry height="205" width="305" x="1410" y="288" as="geometry" />
+        </mxCell>
+        <mxCell id="b21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;executionEnvironment&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Render Free Web Service&lt;/b&gt;&lt;br&gt;NestJS modular monolith&lt;br&gt;Docker (Git-backed build)&lt;br&gt;Scheduler + HealthModule&lt;br&gt;Logs → stdout / Render logs&lt;br&gt;bind 0.0.0.0:$PORT" vertex="1">
+          <mxGeometry height="267" width="350" x="1760" y="268" as="geometry" />
+        </mxCell>
+        <mxCell id="b22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;external service&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;VNPay Sandbox&lt;/b&gt;&lt;br&gt;Payment URL / Return URL&lt;br&gt;Server-to-server IPN + QueryDR&lt;br&gt;External to BrewLite" vertex="1">
+          <mxGeometry height="176" width="285" x="1430" y="694" as="geometry" />
+        </mxCell>
+        <mxCell id="b23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;database&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Render PostgreSQL Free&lt;/b&gt;&lt;br&gt;persistent managed datastore&lt;br&gt;Internal DB endpoint / TCP 5432&lt;br&gt;Prisma migrate / app data&lt;br&gt;Free tier: database expires in 30 days" vertex="1">
+          <mxGeometry height="217" width="350" x="1760" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="b24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=19;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;labelBackgroundColor=none;" value="&lt;b&gt;&amp;lt;&amp;lt;security / operations&amp;gt;&amp;gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Secrets / health / logs&lt;/b&gt;&lt;br&gt;Vercel env: public API URL only&lt;br&gt;Render env: JWT, VNP_*, DATABASE_URL&lt;br&gt;GET /health · GET /health/ready&lt;br&gt;Render runtime logs; no secret values" vertex="1">
+          <mxGeometry height="220" width="930" x="1180" y="925" as="geometry" />
+        </mxCell>
+        <mxCell id="b25" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=26;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;align=left;labelBackgroundColor=none;" value="BrewLite / Assignment 2 - TASK 3.2 - Target architecture (not yet production-verified)" vertex="1">
+          <mxGeometry height="112" width="1490" x="55" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="b26" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontSize=18;fontFamily=Arial;align=center;verticalAlign=middle;spacing=8;align=left;labelBackgroundColor=none;" value="Free-tier caveats: backend sleeps; PostgreSQL Free expires. GHCR is optional / planned. Do not mark production live without testing." vertex="1">
+          <mxGeometry height="122" width="2090" x="55" y="1195" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
