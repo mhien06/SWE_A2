@@ -4,14 +4,14 @@ Sơ đồ mô tả cách BrewLite tạo đơn hàng và xác nhận thanh toán 
 
 ## Bộ sơ đồ bàn giao – Issue #5
 
-| Nội dung | PlantUML | Draw.io chỉnh sửa được | SVG | PNG xem nhanh |
-|---|---|---|---|---|
-| Tổng quan Checkout | [Nguồn](sources/sequence-checkout.puml) | [Draw.io](sources/sequence-checkout.drawio) | [SVG](exports/sequence-checkout.svg) | [PNG](exports/sequence-checkout.png) |
-| Tạo đơn và TX1 | [Nguồn](sources/sequence-create-order.puml) | [Draw.io](sources/sequence-create-order.drawio) | [SVG](exports/sequence-create-order.svg) | [PNG](exports/sequence-create-order.png) |
-| VNPay, IPN, QueryDR, TX2 | [Nguồn](sources/sequence-payment-vnpay.puml) | [Draw.io](sources/sequence-payment-vnpay.drawio) | [SVG](exports/sequence-payment-vnpay.svg) | [PNG](exports/sequence-payment-vnpay.png) |
-| Hủy đơn, hoàn kho và điểm, TX3 | [Nguồn](sources/sequence-cancel-order.puml) | [Draw.io](sources/sequence-cancel-order.drawio) | [SVG](exports/sequence-cancel-order.svg) | [PNG](exports/sequence-cancel-order.png) |
+| Nội dung | Draw.io chỉnh sửa được | SVG để xem và đưa vào báo cáo |
+|---|---|---|
+| Tổng quan Checkout | [Draw.io](sources/sequence-checkout.drawio) | [SVG](exports/sequence-checkout.svg) |
+| Tạo đơn hàng | [Draw.io](sources/sequence-create-order.drawio) | [SVG](exports/sequence-create-order.svg) |
+| Thanh toán VNPay, IPN và QueryDR | [Draw.io](sources/sequence-payment-vnpay.drawio) | [SVG](exports/sequence-payment-vnpay.svg) |
+| Hủy đơn hàng, hoàn kho và điểm | [Draw.io](sources/sequence-cancel-order.drawio) | [SVG](exports/sequence-cancel-order.svg) |
 
-Ba nguồn đầu là file bắt buộc của [Issue #5](https://github.com/mhien06/SWE_A2/issues/5). Sơ đồ hủy được tách riêng để làm rõ FR-15–FR-20. Các khung `ref` trong tổng quan dẫn đến các sơ đồ chi tiết, không bỏ qua các nhánh lỗi.
+Ba sơ đồ đầu là các sơ đồ bắt buộc của [Issue #5](https://github.com/mhien06/SWE_A2/issues/5). Sơ đồ hủy được tách riêng để làm rõ FR-15–FR-20. Các khung `ref` trong tổng quan dẫn đến các sơ đồ chi tiết, không bỏ qua các nhánh lỗi.
 
 **Tài liệu đối chiếu:** [SRS](../requirements/srs.md) và [đặc tả Use Case Checkout](../requirements/use-case-checkout.md).
 
@@ -44,17 +44,17 @@ Ba nguồn đầu là file bắt buộc của [Issue #5](https://github.com/mhie
 - **IPN không hợp lệ:** chữ ký, mã tham chiếu hoặc số tiền sai không làm đổi trạng thái Payment/Order.
 - **Thanh toán đến muộn khi Order đã `CANCELLED`:** Payment `SUCCEEDED`, Order giữ `CANCELLED`; không mở lại đơn, không trừ nguyên liệu hoặc cộng điểm thưởng. Kiểm tra refund cũ trước khi bù điểm.
 - **Thanh toán thành công nhưng thiếu nguyên liệu:** Payment `SUCCEEDED`, Order `PAYMENT_EXCEPTION`; không chuyển `PAID`, không trừ kho hoặc cộng `EARN`. Kiểm tra refund cũ và ledger trước khi bù `ceil(VNPay thực trả / 100)` điểm đúng một lần.
-- **QueryDR:** scheduler thuộc backend tra cứu ngoài transaction giữ khóa, xác minh phản hồi và dùng chung quy trình TX2/idempotency với IPN. Kết quả chưa rõ tiếp tục chờ đối soát.
+- **QueryDR:** scheduler thuộc backend tra cứu ngoài transaction giữ khóa, xác minh phản hồi và dùng chung giao dịch xử lý kết quả thanh toán cùng cơ chế idempotency với IPN. Kết quả chưa rõ tiếp tục chờ đối soát.
 - **Hủy đơn:** Customer chỉ hủy đơn của mình trước pha; Staff chỉ hủy `PAID` trước pha và phải có lý do. Khóa Order đồng bộ với thao tác bắt đầu pha; kiểm tra lại trạng thái sau đối soát.
 - **Hoàn kho và điểm:** hủy đơn đã trả tiền hoàn theo usage thực tế đã trừ, không theo recipe mới; hoàn điểm dùng, thu hồi điểm thưởng và bù VNPay theo ledger một lần. Refund cũ `PENDING/UNKNOWN` khóa bù; refund `SUCCEEDED` hoặc đã bù thì không cấp quyền lợi trùng.
 - **Tự hủy:** chỉ `PENDING/PAYMENT_FAILED` đã hết 15 phút và đã loại trừ giao dịch thành công/chưa rõ. Không tự hủy `PAID` chỉ vì hết hạn.
-- **Rollback:** TX1/TX2/TX3 lỗi ở bất kỳ lệnh ghi hoặc commit đều rollback; không trả kết quả thành công. Khung `alt` phân biệt transaction không lỗi với nhánh lỗi/rollback, không rollback sau commit thành công. Transaction bù điểm cũng rollback và retry bằng khóa nghiệp vụ duy nhất.
+- **Rollback:** các giao dịch tạo đơn hàng, xử lý kết quả thanh toán và hủy đơn hàng nếu lỗi ở bất kỳ lệnh ghi hoặc commit đều rollback; không trả kết quả thành công. Khung `alt` phân biệt transaction không lỗi với nhánh lỗi/rollback, không rollback sau commit thành công. Transaction bù điểm cũng rollback và retry bằng khóa nghiệp vụ duy nhất.
 
 ## Truy vết
 
 | Nội dung | Yêu cầu / quy tắc | Use Case | Activity đối chiếu |
 |---|---|---|---|
-| Validate, giá backend, snapshot, hạn 15 phút, TX1 | FR-04–FR-07, FR-21–FR-22, BR-02–BR-03 | M02–M05, E01–E03, E10 | Tạo đơn |
+| Validate, giá backend, snapshot, hạn 15 phút, giao dịch tạo đơn hàng | FR-04–FR-07, FR-21–FR-22, BR-02–BR-03 | M02–M05, E01–E03, E10 | Tạo đơn |
 | Tạo attempt, key trùng/khác payload, chặn UNKNOWN/hết hạn | FR-07–FR-08, FR-11–FR-13 | M06, A04–A05, A07, E06–E07 | Thanh toán VNPay |
 | Xác minh IPN, trừ kho/EARN một lần, rollback | FR-09–FR-10, FR-12, NFR-04 | M08–M09, A06, E05, E10 | Thanh toán VNPay |
 | QueryDR, hết hạn và giao dịch chưa rõ | FR-13, BR-04 | E06–E07 | Thanh toán VNPay / Hủy đơn |
@@ -66,7 +66,7 @@ Activity liên quan: [Tạo đơn](https://github.com/mhien06/SWE_A2/blob/develo
 
 ## Các quyết định thiết kế cần reviewer xác nhận
 
-- Thời điểm dùng điểm: đề xuất ghi `REDEEM` nguyên tử tại TX1 và trả lại theo ledger khi hủy hoặc ngoại lệ kết thúc. SRS yêu cầu tính nhất quán nhưng chưa chốt thời điểm này; không coi đây là chính sách đã duyệt.
+- Thời điểm dùng điểm: đề xuất ghi `REDEEM` nguyên tử trong giao dịch tạo đơn hàng và trả lại theo ledger khi hủy hoặc ngoại lệ kết thúc. SRS yêu cầu tính nhất quán nhưng chưa chốt thời điểm này; không coi đây là chính sách đã duyệt.
 - Hết hạn 15 phút không đồng nghĩa Order đã `CANCELLED`. Khi Payment chưa rõ, hệ thống phải đối soát trước khi quyết định hủy; nhánh thanh toán đến muộn trong sơ đồ áp dụng khi Order **đã** `CANCELLED`.
 - Trường hợp VNPay thành công nhưng thiếu nguyên liệu: Payment `SUCCEEDED` và Order `PAYMENT_EXCEPTION` (đồng bộ Domain Class Diagram); trạng thái Payment luôn được lưu tách khỏi Order.
 - Không cố định tỷ lệ `EARN`; tỷ lệ bù 1 điểm/100 VNĐ không phải tỷ lệ tích điểm. Phần giảm bằng điểm không được cộng điểm thưởng.
@@ -79,9 +79,9 @@ Activity liên quan: [Tạo đơn](https://github.com/mhien06/SWE_A2/blob/develo
 - Khung `alt`: **những nhánh loại trừ nhau theo điều kiện**.
 - Khung `opt`: nhánh tùy chọn; `loop`: tác vụ lặp; `ref`: tương tác chi tiết ở sơ đồ khác.
 
-## Đồng bộ và tái xuất
+## Đồng bộ và cập nhật sơ đồ
 
-Nguồn chuẩn là bốn file `.puml`. Chạy `python tools/render_sequence_diagrams.py` từ repo để tạo lại Draw.io (các đối tượng native, chỉnh sửa được), SVG và PNG từ cùng nội dung. Script cần Python 3 và Pillow; chỉ hỗ trợ tập cú pháp đang dùng và báo lỗi nếu gặp cú pháp khác. Nếu sửa Draw.io trực tiếp, phải cập nhật lại PlantUML trước khi tái xuất để tránh mất thay đổi.
+Bộ bàn giao sử dụng **bốn file `.drawio` làm nguồn chỉnh sửa** và **bốn file `.svg` làm bản xuất**. Khi cần sửa, mở file Draw.io tương ứng bằng diagrams.net, chỉnh sửa rồi xuất lại SVG cùng tên để hai phiên bản thống nhất. Không cần chạy Python để sử dụng hoặc cập nhật bộ bàn giao rút gọn này.
 
 Giữ phong cách đen trắng, nền trắng, actor hình người, không tô màu. Tài liệu Sequence chỉ đặt tại file này; không tạo lại bản trùng trong `docs/requirements/`.
 
