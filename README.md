@@ -66,7 +66,7 @@ Chạy từ thư mục gốc repository (cần Node.js 24 và `pnpm@11.25.0` n�
 
 Workflow CI chạy cùng các lệnh root ở trên cho cả workspace Web và API. Xem [CI: quality gate, cấu hình và evidence](docs/ci.md).
 
-- **Vị trí Prisma schema, migration và seed (`ADR-003`):** đặt tại `apps/api/prisma/` (`schema.prisma`, thư mục `migrations/` và script seed sẽ được bổ sung ở Task 4.3 / Task 5.2) cùng tệp cấu hình `apps/api/prisma7.config.ts`.
+- **Vị trí Prisma schema, migration và seed (`ADR-003`):** đặt tại `apps/api/prisma/` (`schema.prisma`, `migrations/`, `seed.ts`) cùng tệp cấu hình `apps/api/prisma7.config.ts`.
 
 ---
 
@@ -77,22 +77,24 @@ Cài Docker Desktop, bật Linux containers. Chạy các lệnh từ thư mục 
 1. Nếu chưa có `.env`, sao chép `.env.example` thành `.env` (`Copy-Item .env.example .env` trong PowerShell). Giữ nguyên `.env` hiện có; bổ sung biến thiếu theo file mẫu. Thông tin đăng nhập mẫu chỉ dành cho local.
 2. Kiểm tra cổng: `Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 3000,3001,5433 }`. Không tự dừng tiến trình chưa xác định. Có thể đặt `WEB_PORT`, `API_PORT`, `POSTGRES_PORT` khác trong `.env` nếu cổng bận.
 3. Chạy `docker compose config --quiet`, `docker compose build`, `docker compose up -d`, rồi `docker compose ps`.
-4. Mở Web tại http://localhost:3000 và API tại http://localhost:3001 (API scaffold trả `Hello World!`). Nếu đổi cổng, dùng cổng tương ứng. PostgreSQL: `localhost:5433` trên host; API dùng `postgres:5432` trong mạng Compose.
+4. Mở Web tại http://localhost:3000 và API tại http://localhost:3001. Các API nghiệp vụ gồm menu, Auth, Cart, Orders, Inventory và Loyalty; `/` vẫn là route mặc định của NestJS. Nếu đổi cổng, dùng cổng tương ứng. PostgreSQL: `localhost:5433` trên host; API dùng `postgres:5432` trong mạng Compose.
 
 Ảnh dev dùng Node.js 24 và pnpm 11.25.0. Dependencies được cài trong Linux, không mount `node_modules` Windows. Web `app/`, `public/` và API `src/`, `prisma/`, `prisma7.config.ts` được bind mount; sửa source có hot reload (polling cho Windows). Khi đổi dependencies, lockfile hoặc config khác, chạy lại `docker compose up -d --build`. Web đang dùng Webpack cho chế độ dev với polling.
 
-`NEXT_PUBLIC_API_URL` là địa chỉ API cho trình duyệt; `API_INTERNAL_URL` dành cho truy cập từ container Web. Scaffold chưa có luồng gọi API nghiệp vụ. Healthcheck Web/API kiểm tra HTTP `/`; PostgreSQL dùng `pg_isready`, API chỉ khởi động sau khi database healthy.
+`NEXT_PUBLIC_API_URL` là địa chỉ API cho trình duyệt; `API_INTERNAL_URL` dành cho truy cập từ container Web. Web hỗ trợ đăng nhập/đăng ký, Cart, Orders và Staff orders. Checkout/Payment Return, VNPay IPN và QueryDR thuộc Issue #22/#23 và cần tích hợp trước khi có luồng thanh toán end-to-end. Healthcheck Web/API kiểm tra HTTP `/`; PostgreSQL dùng `pg_isready`, API chỉ khởi động sau khi database healthy.
 
 ### Prisma và dữ liệu
 
-Cấu hình giữ tại `apps/api/prisma7.config.ts`, schema tại `apps/api/prisma/schema.prisma`; Prisma 7 và adapter PostgreSQL đã có trong API. Kiểm tra bằng:
+Cấu hình giữ tại `apps/api/prisma7.config.ts`, schema/migrations/seed tại `apps/api/prisma/`; Prisma 7 và adapter PostgreSQL đã có trong API. Với Compose, chạy migration và seed bằng:
 
 ```sh
+docker compose exec api pnpm db:migrate
+docker compose exec api pnpm db:seed
 docker compose exec api pnpm exec prisma validate --config prisma7.config.ts
 docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;"'
 ```
 
-Schema hiện chưa có model; không tự chạy migration, `db push` hoặc tạo bảng nghiệp vụ ở bước scaffold. Khi chạy Prisma trên host, cung cấp `DATABASE_URL` qua môi trường hoặc `apps/api/.env` (Prisma không tự đọc `.env` ở root khi chạy trong API).
+Khi chạy Prisma trên host, cung cấp `DATABASE_URL` qua môi trường hoặc `apps/api/.env` (Prisma không tự đọc `.env` ở root khi chạy trong API). JWT cần `JWT_SECRET`; Compose có giá trị local-only mặc định. Loyalty EARN/REDEEM không có tỷ lệ mặc định — chỉ cấu hình sau khi nhóm duyệt chính sách. Xem [API/transaction contract Task 5.1](docs/api/task5.1-auth-orders-contract.md).
 
 PostgreSQL 17 lưu dữ liệu trong named volume `swe-a2-dev_postgres_data`, độc lập với container PostgreSQL đã có trên máy. `docker compose stop` hoặc `docker compose down` không xóa volume. **Không dùng `docker compose down -v` hoặc xóa volume.** Đổi user/password/database trong `.env` không cập nhật database đã khởi tạo; giữ thông tin cũ hoặc quản trị database riêng, không xóa dữ liệu để sửa lỗi.
 

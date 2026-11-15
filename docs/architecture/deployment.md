@@ -58,7 +58,7 @@ Bản vẽ là **mục tiêu triển khai** cho SWE_A2, không phải bằng ch�
 | Nơi lưu | Ví dụ biến | Nguyên tắc |
 |---|---|---|
 | Vercel | `NEXT_PUBLIC_API_BASE_URL` (tên dự kiến, khớp code thực tế) | Chỉ expose URL public; không lưu `VNP_HASH_SECRET` hay `JWT_SECRET` ở biến public |
-| Render Web Service | `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `VNP_TMN_CODE`, `VNP_HASH_SECRET`, `VNP_PAY_URL`, `VNP_API_URL`, `VNP_RETURN_URL`, `WEB_ORIGIN`, `ORDER_PENDING_TTL_MINUTES`, `PAYMENT_ATTEMPT_TTL_MINUTES` | Cấu hình trên Render dashboard hoặc secret management; không commit giá trị thật |
+| Render Web Service | `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `VNP_TMN_CODE`, `VNP_HASH_SECRET`, `VNP_PAY_URL`, `VNP_API_URL`, `VNP_RETURN_URL`, `WEB_ORIGIN`, `PAYMENT_ATTEMPT_TTL_MINUTES` | Cấu hình trên Render dashboard hoặc secret management; không commit giá trị thật |
 | Local | `.env` không commit, `.env.example` ghi tên/giá trị giả | DB local khác DB cloud; local seed không được chạy vào production |
 | GitHub Actions (khi làm Task 5.3) | Token/Deploy Hook nếu thực sự dùng | Dùng GitHub Secrets; không in token trong log, không đẩy vào PR từ fork thiếu tin cậy |
 
