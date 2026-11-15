@@ -4,12 +4,14 @@ import {
   UnauthorizedException,
   type ExecutionContext,
 } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service.js";
 import { jwtVerify } from "jose";
 import type { Request } from "express";
 import type { AuthenticatedUser } from "./auth.types.js";
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
+  constructor(private readonly prisma: PrismaService) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<
       Request & { user?: AuthenticatedUser }
@@ -41,11 +43,9 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException("Invalid access token");
       }
 
-      request.user = {
-        id: payload.sub,
-        email: payload.email,
-        role: payload.role,
-      };
+      const user = await this.prisma.user.findUnique({where:{id:payload.sub},select:{id:true,email:true,role:true,status:true}});
+      if (!user || user.status !== "ACTIVE") throw new UnauthorizedException("Tài khoản không còn hoạt động.");
+      request.user = {id:user.id,email:user.email,role:user.role};
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException) {

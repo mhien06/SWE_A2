@@ -14,14 +14,20 @@
   --bl-sage: #eff6ef;
   --bl-success-bg: #e2f0df;
   --bl-notice-bg: #fff5e9;
-  --bl-serif: Georgia, "Times New Roman", serif;
+  --bl-serif: "Segoe UI", system-ui, sans-serif;
 
   color: var(--bl-ink);
   line-height: 1.55;
 }
 
+/* Intrinsic widths prevent checkout overflowing its parent on small screens. */
+.brewlite-payment-scope { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.brewlite-payment-scope *, .brewlite-payment-scope *::before, .brewlite-payment-scope *::after { min-width: 0; }
+.brewlite-payment-scope .checkout-order-reference { color: #647a71; font-size: 13px; line-height: 1.6; margin: 12px 0; overflow-wrap: anywhere; }
+
 .brewlite-payment-scope .inner-page {
-  width: min(1140px, calc(100vw - 48px));
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 28px 0 60px;
 }
@@ -52,7 +58,7 @@
 
 .brewlite-payment-scope .cart-layout {
   display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, .85fr);
   gap: 24px;
   align-items: start;
 }
@@ -309,7 +315,7 @@
 
 @media (max-width: 860px) {
   .brewlite-payment-scope .inner-page {
-    width: calc(100vw - 28px);
+    width: 100%;
     padding: 20px 0 44px;
   }
 
@@ -323,4 +329,50 @@
   .brewlite-payment-scope .checkout-success {
     padding: 18px;
   }
+}
+
+/* Base layout targets phones; wider layouts are progressive enhancements. */
+.brewlite-payment-scope { --bl-coffee: #08765f; --bl-ink: #123c34; --bl-paper: #fff; --bl-clay: #08765f; --bl-cream: #edf5ef; }
+.brewlite-payment-scope .inner-page { width: 100%; max-width: 1200px; padding: 0; }
+.brewlite-payment-scope .cart-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.brewlite-payment-scope .checkout-success { width: 100%; max-width: 960px; padding: 20px 16px; border-radius: 20px; }
+.brewlite-payment-scope .page-title { font-family: inherit; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -.035em; }
+.brewlite-payment-scope .page-lead { font-size: 14px; line-height: 1.75; }
+.brewlite-payment-scope .section-kicker { font-size: 10px; letter-spacing: .12em; }
+.brewlite-payment-scope .checkout-panel, .brewlite-payment-scope .payment-panel, .brewlite-payment-scope .summary-card { padding: 18px; }
+.brewlite-payment-scope .payment-panel > div:first-child { flex-wrap: wrap; gap: 12px; }
+.brewlite-payment-scope .actions-row { display: grid; grid-template-columns: minmax(0, 1fr); }
+.brewlite-payment-scope .button { min-height: 46px; white-space: normal; text-align: center; border-radius: 12px; }
+.brewlite-payment-scope .checkout-line > strong, .brewlite-payment-scope .summary-row > strong { flex-shrink: 0; }
+.brewlite-payment-scope .empty-cart { margin: 12px auto; padding: 24px 16px; }
+@media (min-width: 640px) {
+  .brewlite-payment-scope .checkout-success { padding: 32px; }
+  .brewlite-payment-scope .page-title { font-size: 32px; }
+  .brewlite-payment-scope .actions-row { display: flex; flex-wrap: wrap; }
+  .brewlite-payment-scope .checkout-panel, .brewlite-payment-scope .payment-panel, .brewlite-payment-scope .summary-card { padding: 24px; }
+}
+@media (min-width: 1000px) {
+  .brewlite-payment-scope .cart-layout { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; }
+  .brewlite-payment-scope .page-title { font-size: 36px; }
+  .brewlite-payment-scope .summary-card { position: sticky; top: 112px; }
+}
+
+/* Payment return: aligned heading, reference and action groups. */
+.brewlite-payment-scope .payment-result { max-width: 800px; }
+.brewlite-payment-scope .payment-result-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.brewlite-payment-scope .payment-result-icon { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; border-radius: 14px; color: #08765f; background: #e8f4eb; }
+.brewlite-payment-scope .payment-result-icon svg { width: 26px; height: 26px; }
+.brewlite-payment-scope .payment-result-heading .section-kicker { display: block; margin: 0 0 6px; line-height: 1.5; }
+.brewlite-payment-scope .payment-result-heading .page-title { margin: 0; font-size: clamp(23px, 3vw, 32px); }
+.brewlite-payment-scope .payment-result-reference { display: grid; gap: 5px; margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
+.brewlite-payment-scope .payment-result-reference span { color: var(--bl-muted); }
+.brewlite-payment-scope .payment-result-reference strong { overflow-wrap: anywhere; font-weight: 600; }
+.brewlite-payment-scope .payment-result .payment-panel { box-shadow: none; }
+.brewlite-payment-scope .payment-result .summary-rows { margin: 22px 0; gap: 16px; }
+.brewlite-payment-scope .payment-result .actions-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.brewlite-payment-scope .payment-result .button { width: 100%; border-radius: 12px; }
+.brewlite-payment-scope .payment-result-navigation { border-top: 1px solid var(--bl-line); padding-top: 20px; margin-top: 24px; }
+@media (min-width: 540px) {
+  .brewlite-payment-scope .payment-result .actions-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .brewlite-payment-scope .payment-result-reference { grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
 }

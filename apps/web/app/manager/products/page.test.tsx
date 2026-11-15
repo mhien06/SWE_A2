@@ -1,0 +1,10 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import ProductsAdmin from "./page";
+const state=vi.hoisted(()=>({role:"MANAGER",request:vi.fn()}));
+vi.mock("../../components/auth-session",()=>({useAuthSession:()=>({ready:true,session:{user:{role:state.role}}})}));
+vi.mock("../../lib/api",()=>({apiFetch:state.request}));
+beforeEach(()=>{state.role="MANAGER";state.request.mockReset();state.request.mockResolvedValue([{id:"product-id",name:"Cà phê",description:"",basePrice:30000,isAvailable:true}]);});
+afterEach(cleanup);
+it("blocks staff before requesting product administration",()=>{state.role="STAFF";render(<ProductsAdmin/>);expect(screen.getByText(/Chỉ tài khoản quản lý/)).toBeInTheDocument();expect(state.request).not.toHaveBeenCalled();});
+it("requires a reason before changing availability",async()=>{render(<ProductsAdmin/>);fireEvent.click(await screen.findByRole("button",{name:"Ngừng bán"}));expect(screen.getByRole("alert")).toHaveTextContent("Điền lý do");expect(state.request).toHaveBeenCalledTimes(1);fireEvent.change(screen.getByLabelText("Lý do thay đổi"),{target:{value:"Hết nguyên liệu"}});fireEvent.click(screen.getByRole("button",{name:"Ngừng bán"}));await waitFor(()=>expect(state.request).toHaveBeenCalledWith("/manager/products/product-id/availability",{method:"PATCH",body:JSON.stringify({isAvailable:false,reason:"Hết nguyên liệu"})}));});

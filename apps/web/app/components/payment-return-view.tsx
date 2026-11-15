@@ -25,20 +25,22 @@ export async function renderPaymentReturnPage({
   // ADR-004 & SRS FR-09: Bỏ qua hoàn toàn vnp_ResponseCode / vnp_TransactionStatus trên Return URL.
   // Chỉ dùng orderId để truy vấn trạng thái đã được backend xác minh từ cơ sở dữ liệu.
   return (
-    <main className="brewlite-payment-scope">
+    <div className="brewlite-payment-scope">
       <div className="inner-page">
-        <div className="checkout-success">
-          <div className="success-icon" aria-hidden="true">
-            ✓
+        <div className="checkout-success payment-result">
+          <div className="payment-result-heading">
+            <div className="payment-result-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.7" /><path d="M3 10h18M7 15h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
+            </div>
+            <div>
+              <span className="section-kicker">BREWLITE · VNPAY SANDBOX</span>
+              <h1 className="page-title">Kết quả thanh toán</h1>
+            </div>
           </div>
-          <span className="section-kicker">BREWLITE PAYMENT · VNPAY SANDBOX</span>
-          <h1 className="page-title">Kết quả thanh toán</h1>
           {validOrderId ? (
             <>
-              <p className="page-lead">
-                Mã đơn hàng: <strong>#{validOrderId}</strong>. Trạng thái được tải
-                trực tiếp từ máy chủ BrewLite sau khi đối chiếu IPN hoặc QueryDR.
-              </p>
+              <p className="payment-result-reference"><span>Mã đơn hàng</span><strong>#{validOrderId}</strong></p>
+              <p className="page-lead">Theo dõi kết quả thanh toán và thông tin đơn hàng của bạn.</p>
               <PaymentPanel
                 orderId={validOrderId}
                 token={token}
@@ -51,7 +53,7 @@ export async function renderPaymentReturnPage({
               đơn hàng.
             </div>
           )}
-          <div className="actions-row">
+          <div className="actions-row payment-result-navigation">
             <Link className="button button-outline" href="/orders">
               Lịch sử đơn hàng
             </Link>
@@ -61,6 +63,6 @@ export async function renderPaymentReturnPage({
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

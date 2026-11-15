@@ -34,6 +34,27 @@ interface RequiredIngredient {
 export class InventoryService {
   constructor(private readonly prisma: PrismaService) {}
 
+  catalog() {
+    return this.prisma.product.findMany({ orderBy: { name: "asc" }, include: { options: true } });
+  }
+
+  async history(ingredientId?: string) {
+    if (ingredientId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ingredientId)) {
+      throw new BadRequestException("Invalid ingredient ID");
+    }
+    const where = ingredientId ? { ingredientId } : {};
+    const [adjustments, deductions, restorations] = await Promise.all([
+      this.prisma.inventoryAdjustment.findMany({ where, take: 100, orderBy: { createdAt: "desc" }, include: { ingredient: true, actor: { select: { name: true } } } }),
+      this.prisma.orderIngredientUsage.findMany({ where, take: 100, orderBy: { deductedAt: "desc" }, include: { orderItem: { include: { order: true } } } }),
+      this.prisma.orderIngredientUsage.findMany({ where: { ...where, restoredAt: { not: null } }, take: 100, orderBy: { restoredAt: "desc" }, include: { orderItem: { include: { order: { include: { cancellation: { include: { cancelledBy: { select: { name: true } } } } } } } } } }),
+    ]);
+    return [
+      ...adjustments.map(row => ({ id: `adjust:${row.id}`, type: "ADJUST", ingredient: row.ingredient.name, unit: row.ingredient.unit, delta: Number(row.quantityDelta), at: row.createdAt, actor: row.actor.name, reason: row.reason, orderId: null as string | null })),
+      ...deductions.map(row => ({ id: `deduct:${row.id}`, type: "DEDUCT", ingredient: row.ingredientNameSnapshot, unit: row.unitSnapshot, delta: -Number(row.quantityDeducted), at: row.deductedAt, actor: "Hệ thống", reason: `Thanh toán ${row.orderItem.order.orderCode}`, orderId: row.orderItem.orderId })),
+      ...restorations.map(row => ({ id: `restore:${row.id}`, type: "RESTORE", ingredient: row.ingredientNameSnapshot, unit: row.unitSnapshot, delta: Number(row.quantityRestored), at: row.restoredAt!, actor: row.orderItem.order.cancellation?.cancelledBy?.name ?? "Hệ thống", reason: row.orderItem.order.cancellation?.reason ?? `Hoàn kho ${row.orderItem.order.orderCode}`, orderId: row.orderItem.orderId })),
+    ].sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 100);
+  }
+
   listIngredients() {
     return this.prisma.ingredient.findMany({
       orderBy: { name: "asc" },
@@ -42,9 +63,9 @@ export class InventoryService {
 
   listRecipes() {
     return this.prisma.recipe.findMany({
-      where: { isActive: true },
       orderBy: [{ productId: "asc" }, { version: "desc" }],
       include: {
+        createdBy: { select: { id: true, name: true } },
         product: { select: { id: true, name: true } },
         productOption: { select: { id: true, name: true, type: true } },
         ingredients: { include: { ingredient: true } },
@@ -102,7 +123,7 @@ export class InventoryService {
         throw new NotFoundException("Ingredient not found");
       }
 
-      const next = quantity(ingredient.quantityOnHand) + input.quantityDelta;
+      const next = roundQuantity(quantity(ingredient.quantityOnHand) + input.quantityDelta);
       if (next < 0) {
         throw new BadRequestException("Stock quantity cannot be negative");
       }
@@ -123,7 +144,7 @@ export class InventoryService {
     });
   }
 
-  async createRecipe(input: CreateRecipeDto) {
+  async createRecipe(input: CreateRecipeDto, actorUserId: string) {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw(
         Prisma.sql`SELECT "id" FROM "Product" WHERE "id" = CAST(${input.productId} AS uuid) FOR UPDATE`,
@@ -188,6 +209,7 @@ export class InventoryService {
           productId: input.productId,
           productOptionId: input.productOptionId ?? null,
           version: (latest?.version ?? 0) + 1,
+          createdByUserId: actorUserId,
           ingredients: {
             create: input.ingredients.map((line) => ({
               ingredientId: line.ingredientId,
@@ -409,6 +431,8 @@ export class InventoryService {
       if (!size) {
         return null;
       }
+      const selectedToppings = item.product.options.filter(option => option.type === "TOPPING" && item.selectedToppingsSnapshot.includes(option.name));
+      if (selectedToppings.length !== item.selectedToppingsSnapshot.length) return null;
       const selectedOptions = [
         size,
         ...item.product.options.filter(
@@ -426,7 +450,9 @@ export class InventoryService {
           activeRecipes.find((recipe) => recipe.productOptionId === option.id),
         )
         .filter((recipe) => recipe !== undefined);
-      if (!baseRecipe && variantRecipes.length === 0) {
+      // Base covers size S; every other size and every topping needs an explicit addition.
+      const missingRecipe = selectedOptions.some(option => !(option.type === "SIZE" && option.name === "S") && !activeRecipes.some(recipe => recipe.productOptionId === option.id));
+      if (!baseRecipe || baseRecipe.ingredients.length === 0 || missingRecipe) {
         return null;
       }
 
@@ -434,6 +460,7 @@ export class InventoryService {
         if (!recipe) {
           continue;
         }
+        if (recipe.ingredients.length === 0) return null;
         for (const ingredientLine of recipe.ingredients) {
           lines.push({
             ingredientId: ingredientLine.ingredientId,

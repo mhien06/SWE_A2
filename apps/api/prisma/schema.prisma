@@ -83,6 +83,9 @@ model User {
   orders                     Order[]
   loyalty                    LoyaltyTransaction[]
   cancellations              OrderCancellation[]
+  productChanges             ProductChange[]
+  orderStatusChanges         OrderStatusChange[]
+  recipeChanges              Recipe[]
   inventoryAdjustments       InventoryAdjustment[]
   productAvailabilityChanges ProductAvailabilityChange[]
 }
@@ -124,6 +127,7 @@ model Product {
   recipes             Recipe[]
   cartItems           CartItem[]
   orderItems          OrderItem[]
+  changes             ProductChange[]
   availabilityChanges ProductAvailabilityChange[]
 }
 
@@ -169,6 +173,8 @@ model Ingredient {
 }
 
 model Recipe {
+  createdByUserId String? @db.Uuid
+  createdBy User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   id              String             @id @default(uuid()) @db.Uuid
   productId       String             @db.Uuid
   productOptionId String?            @db.Uuid
@@ -214,6 +220,7 @@ model Order {
   payments             Payment[]
   cancellation         OrderCancellation?
   loyaltyTransactions  LoyaltyTransaction[]
+  statusChanges        OrderStatusChange[]
   paymentEvents        PaymentEvent[]
 
   @@index([userId, createdAt])
@@ -356,4 +363,28 @@ model LoyaltyTransaction {
   @@unique([paymentId, type])
   @@index([userId, createdAt])
   @@index([orderId, type])
+}
+
+model ProductChange {
+  id String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  actorUserId String @db.Uuid
+  reason String
+  product Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  before Json?
+  after Json
+  createdAt DateTime @default(now())
+  @@index([productId, createdAt])
+}
+model OrderStatusChange {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  actorUserId String @db.Uuid
+  order Order @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fromStatus OrderStatus
+  toStatus OrderStatus
+  createdAt DateTime @default(now())
+  @@index([orderId, createdAt])
 }

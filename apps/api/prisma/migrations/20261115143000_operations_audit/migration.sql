@@ -1,0 +1,4 @@
+CREATE TABLE "ProductChange" ("id" UUID NOT NULL, "productId" UUID NOT NULL REFERENCES "Product"("id"), "actorUserId" UUID NOT NULL REFERENCES "User"("id"), "reason" TEXT NOT NULL, "before" JSONB, "after" JSONB NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "ProductChange_pkey" PRIMARY KEY ("id"));
+CREATE INDEX "ProductChange_productId_createdAt_idx" ON "ProductChange"("productId", "createdAt");
+CREATE TABLE "OrderStatusChange" ("id" UUID NOT NULL, "orderId" UUID NOT NULL REFERENCES "Order"("id"), "actorUserId" UUID NOT NULL REFERENCES "User"("id"), "fromStatus" "OrderStatus" NOT NULL, "toStatus" "OrderStatus" NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "OrderStatusChange_pkey" PRIMARY KEY ("id"));
+CREATE INDEX "OrderStatusChange_orderId_createdAt_idx" ON "OrderStatusChange"("orderId", "createdAt");

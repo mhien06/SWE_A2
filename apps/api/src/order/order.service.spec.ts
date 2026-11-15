@@ -36,6 +36,24 @@ function cartItem() {
 }
 
 describe("OrderService", () => {
+  it.each(["CUSTOMER", "STAFF", "MANAGER"] as const)("%s cancels a paid order and applies inventory/point effects only once", async (role) => {
+    const order = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", userId: "customer-id", status: "PAID", pointsRedeemed: 20, pointsDiscountAmount: 2000, payments: [{ id: "payment-id", amount: 29050 }], cancellation: null as null | { cancelledAt: Date } };
+    const tx = {
+      $queryRaw: vi.fn(),
+      order: { findUnique: vi.fn(async () => order), updateMany: vi.fn(async () => { order.status = "CANCELLED"; return { count: 1 }; }) },
+      orderCancellation: { create: vi.fn(async () => { order.cancellation = { cancelledAt: new Date() }; }) },
+    };
+    const inventory = { restoreIngredientsForOrder: vi.fn().mockResolvedValue(1) };
+    const loyalty = { returnRedeemedPoints: vi.fn(), reverseEarnedPoints: vi.fn() };
+    const compensation = { compensateVerifiedPayment: vi.fn().mockResolvedValue({ outcome: "GRANTED", pointsGranted: 291, idempotencyKey: "vnpay-comp:payment-id" }) };
+    const service = new OrderService({ $transaction: vi.fn(work => work(tx)) } as unknown as PrismaService, inventory as unknown as InventoryService, loyalty as unknown as LoyaltyService, compensation);
+    await service.cancelOrder(order.id, { id: role === "CUSTOMER" ? "customer-id" : "operator-id", role }, "Khách yêu cầu hủy");
+    await service.cancelOrder(order.id, { id: role === "CUSTOMER" ? "customer-id" : "operator-id", role }, "Khách yêu cầu hủy");
+    expect(loyalty.returnRedeemedPoints).toHaveBeenCalledExactlyOnceWith(tx, { userId: "customer-id", orderId: order.id, pointsRedeemed: 20, pointsDiscountAmount: 2000 });
+    expect(loyalty.reverseEarnedPoints).toHaveBeenCalledTimes(1);
+    expect(compensation.compensateVerifiedPayment).toHaveBeenCalledExactlyOnceWith(tx, { userId: "customer-id", orderId: order.id, paymentId: "payment-id", actualPaidVnd: 29050 });
+    expect(inventory.restoreIngredientsForOrder).toHaveBeenCalledTimes(1);
+  });
   it("creates a 15-minute PENDING snapshot without deducting inventory", async () => {
     const createdOrder = {
       id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -175,4 +193,13 @@ describe("OrderService", () => {
       ),
     ).rejects.toThrow("Staff may cancel only a PAID order");
   });
+});
+
+
+it('defers cancellation with unresolved payment without restoring stock or points',async()=>{
+ const tx={ $queryRaw:vi.fn(),order:{findUnique:vi.fn().mockResolvedValue({id:'order',userId:'customer',status:'PENDING',payments:[{id:'payment',status:'UNKNOWN'}]})},paymentEvent:{findFirst:vi.fn().mockResolvedValue(null),create:vi.fn()},payment:{update:vi.fn()}};
+ const inventory={restoreIngredientsForOrder:vi.fn()};const loyalty={returnRedeemedPoints:vi.fn()};
+ const service=new OrderService({$transaction:vi.fn(work=>work(tx))} as unknown as PrismaService,inventory as unknown as InventoryService,loyalty as unknown as LoyaltyService);
+ expect(await service.cancelOrder('order',{id:'customer',role:'CUSTOMER'})).toMatchObject({status:'PENDING',pendingCancellation:true});
+ expect(inventory.restoreIngredientsForOrder).not.toHaveBeenCalled();expect(loyalty.returnRedeemedPoints).not.toHaveBeenCalled();expect(tx.paymentEvent.create).toHaveBeenCalledOnce();
 });

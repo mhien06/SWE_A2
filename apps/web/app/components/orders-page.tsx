@@ -24,7 +24,7 @@ type Order = {
     quantity: number;
     lineTotal: number;
   }>;
-  payments?: Array<{ id: string; status: string }>;
+  payments?: Array<{ id: string; status: string; amount?: number; createdAt?: string; verifiedAt?: string }>;
 };
 
 const orderStatusLabel: Record<string, string> = {
@@ -74,11 +74,14 @@ export default function OrdersPage({ orderId }: { orderId?: string }) {
     setBusy(true);
     setError("");
     try {
-      await apiFetch(`/orders/${order.id}/cancel`, {
+      const result = await apiFetch<{pendingCancellation?:boolean;message?:string}>(`/orders/${order.id}/cancel`, {
         method: "POST",
         body: JSON.stringify({}),
       });
+      if (result.pendingCancellation) {setError(result.message ?? "Đang đối soát thanh toán, đơn chưa hủy.");return;}
       setOrder({ ...order, status: "CANCELLED" });
+      setOrder(await apiFetch<Order>(`/orders/${order.id}`));
+      window.dispatchEvent(new Event("brewlite:loyalty-changed"));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không thể hủy đơn");
     } finally {
@@ -101,6 +104,9 @@ export default function OrdersPage({ orderId }: { orderId?: string }) {
     return <div className="state-box" role="status">Đang tải đơn hàng…</div>;
   }
 
+  const paid = order?.payments?.some(payment => payment.status === "SUCCEEDED") ?? false;
+  const unverified = order?.payments?.some(payment => ["PENDING", "UNKNOWN"].includes(payment.status)) ?? false;
+
   if (orderId) {
     return (
       <section className="customer-page">
@@ -112,6 +118,12 @@ export default function OrdersPage({ orderId }: { orderId?: string }) {
           <article className="order-detail-card">
             <span className="eyebrow">{order.orderCode}</span>
             <h1>{orderStatusLabel[order.status] ?? order.status}</h1>
+            {order.vnpayPayableAmount === 0 && order.pointsRedeemed > 0 && <p>Phương thức: thanh toán hoàn toàn bằng điểm BrewLite.</p>}
+            <p>Khách hàng: <strong>{session.user.name}</strong></p>
+            {order.status === "CANCELLED" && <div className="loyalty-notice">
+              <p>{paid ? "Đơn đã hủy sau khi thanh toán. Xem lịch sử điểm để kiểm tra kết quả điều chỉnh." : unverified ? "Đơn đã hủy. Giao dịch VNPay đang được xác minh; chưa xác nhận tiền đã thu hoặc điểm bù." : "Đơn đã hủy, chưa thanh toán VNPay. Không có tiền VNPay để hoàn hoặc bù điểm."}</p>
+              {(paid || order.pointsRedeemed > 0) && <Link href="/loyalty">{paid ? "Xem lịch sử điều chỉnh điểm →" : "Xem lịch sử hoàn điểm đã dùng →"}</Link>}
+            </div>}
             <p>Mã đơn: {order.id}</p>
             <p>Tạo lúc: {new Date(order.createdAt).toLocaleString("vi-VN")}</p>
             {order.status === "PENDING" && (
@@ -120,6 +132,7 @@ export default function OrdersPage({ orderId }: { orderId?: string }) {
             {order.payments?.[0] && (
               <p>Trạng thái thanh toán: {order.payments[0].status}</p>
             )}
+            {!!order.payments?.length && <details className="order-audit"><summary>Lịch sử các lượt thanh toán ({order.payments.length})</summary>{order.payments.map(payment=><p key={payment.id}>{payment.createdAt && new Date(payment.createdAt).toLocaleString("vi-VN")} · {({SUCCEEDED:"Thành công",FAILED:"Thất bại",PENDING:"Đang chờ",EXPIRED:"Hết hạn",UNKNOWN:"Đang xác minh"} as Record<string,string>)[payment.status] ?? payment.status}{payment.amount!==undefined && ` · ${formatVndPrice(payment.amount)}`}</p>)}</details>}
             <ul className="order-item-list">
               {order.items.map((item) => (
                 <li key={item.id}>
@@ -134,14 +147,17 @@ export default function OrdersPage({ orderId }: { orderId?: string }) {
               ))}
             </ul>
             <div className="quote-details">
-              <p>Tổng đơn <strong>{formatVndPrice(order.totalAmount)}</strong></p>
+              <p>{order.status === "CANCELLED" ? "Giá trị đơn trước khi hủy" : "Tổng đơn"} <strong>{formatVndPrice(order.totalAmount)}</strong></p>
               {order.pointsRedeemed > 0 && (
                 <>
                   <p>Điểm đã dùng: {order.pointsRedeemed}</p>
                   <p>Giảm bằng điểm <strong>{formatVndPrice(order.pointsDiscountAmount)}</strong></p>
                 </>
               )}
-              <p>VNPay phải trả <strong>{formatVndPrice(order.vnpayPayableAmount)}</strong></p>
+              {order.status === "CANCELLED" ? <>
+                <p>Còn phải thanh toán <strong>{formatVndPrice(0)}</strong></p>
+                {paid && <p>VNPay đã thanh toán <strong>{formatVndPrice(order.payments!.filter(payment => payment.status === "SUCCEEDED").reduce((sum, payment) => sum + (payment.amount ?? 0), 0))}</strong></p>}
+              </> : <p>{paid ? "VNPay đã thanh toán" : "VNPay phải trả"} <strong>{formatVndPrice(order.vnpayPayableAmount)}</strong></p>}
             </div>
             {order.status === "PENDING" || order.status === "PAYMENT_FAILED" ? (
               <Link
@@ -152,9 +168,12 @@ export default function OrdersPage({ orderId }: { orderId?: string }) {
               </Link>
             ) : null}
             {["PENDING", "PAYMENT_FAILED", "PAID"].includes(order.status) && (
+              <div>
+              {order.status === "PAID" && order.vnpayPayableAmount > 0 && <p className="loyalty-notice">Hủy trước khi pha: hoàn điểm đã dùng, thu hồi điểm thưởng và bù tiền VNPay bằng điểm BrewLite (1 điểm / 100đ, làm tròn lên), sau khi kiểm tra không trùng hoàn tiền.</p>}
               <button type="button" className="secondary-button" disabled={busy} onClick={() => void cancel()}>
                 {busy ? "Đang hủy…" : "Hủy đơn"}
               </button>
+              </div>
             )}
           </article>
         )}

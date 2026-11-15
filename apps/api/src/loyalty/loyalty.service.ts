@@ -36,6 +36,7 @@ export class LoyaltyService {
     return {
       pointsBalance: user.pointsBalance,
       transactions: user.loyalty,
+      redemptionVndPerPoint: Number(process.env.LOYALTY_REDEEM_VND_PER_POINT) > 0 ? this.getRedemptionDiscount(1) : null,
     };
   }
 

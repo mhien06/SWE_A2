@@ -101,7 +101,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
       imports: [PaymentModule, SchedulerModule, OrderModule],
     })
       .overrideProvider(PrismaService)
-      .useValue({})
+      .useValue({user:{findUnique:async ({where}:{where:{id:string}})=>[userId,otherUserId,staffUserId].includes(where.id)?{id:where.id,email:"test@brewlite.local",role:where.id===staffUserId?"STAFF":"CUSTOMER",status:"ACTIVE"}:null}})
       .overrideProvider(PAYMENT_REPOSITORY_PORT)
       .useValue(repository)
       .compile();

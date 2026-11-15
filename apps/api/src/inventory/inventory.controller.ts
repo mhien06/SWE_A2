@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
@@ -45,9 +46,17 @@ export class InventoryController {
   }
 
   @Post("recipes")
-  createRecipe(@Body() body: CreateRecipeDto) {
-    return this.inventoryService.createRecipe(body);
+  createRecipe(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateRecipeDto) {
+    return this.inventoryService.createRecipe(body, user.id);
   }
+
+  @Get("history")
+  history(@Query("ingredientId") ingredientId?: string) {
+    return this.inventoryService.history(ingredientId);
+  }
+
+  @Get("catalog")
+  catalog() { return this.inventoryService.catalog(); }
 
   @Get("recipes")
   listRecipes() {

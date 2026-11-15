@@ -17,6 +17,7 @@ import { MeasurementUnit } from "../../generated/prisma/client.js";
 export class CreateIngredientDto {
   @IsString()
   @MaxLength(100)
+  @Matches(/\S/)
   name!: string;
 
   @IsEnum(MeasurementUnit)

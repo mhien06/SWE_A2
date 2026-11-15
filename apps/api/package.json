@@ -26,7 +26,8 @@
     "dev": "nest start --watch",
     "db:generate": "prisma generate --config prisma7.config.ts",
     "db:migrate": "prisma migrate dev --config prisma7.config.ts",
-    "db:seed": "prisma db seed --config prisma7.config.ts"
+    "db:seed": "prisma db seed --config prisma7.config.ts",
+    "test:inventory": "vitest run --config vitest.config.inventory.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

@@ -109,18 +109,18 @@ export function CheckoutView({
   if (!activeSession) {
     if (!authIsReady) {
       return (
-        <main className="brewlite-payment-scope">
+        <div className="brewlite-payment-scope">
           <div className="inner-page">
             <div className="empty-cart" role="status">
               <p>Đang kiểm tra phiên đăng nhập…</p>
             </div>
           </div>
-        </main>
+        </div>
       );
     }
 
     return (
-      <main className="brewlite-payment-scope">
+      <div className="brewlite-payment-scope">
         <div className="inner-page">
           <div className="empty-cart">
             <span className="section-kicker">BREWLITE CHECKOUT</span>
@@ -142,7 +142,7 @@ export function CheckoutView({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -151,7 +151,7 @@ export function CheckoutView({
     activeSession.account.role === "MANAGER"
   ) {
     return (
-      <main className="brewlite-payment-scope">
+      <div className="brewlite-payment-scope">
         <div className="inner-page">
           <div className="empty-cart" role="alert">
             <span className="section-kicker">BREWLITE CHECKOUT</span>
@@ -167,23 +167,22 @@ export function CheckoutView({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (orderId) {
     return (
-      <main className="brewlite-payment-scope">
+      <div className="brewlite-payment-scope">
         <div className="inner-page">
           <div className="checkout-success">
             <span className="section-kicker">BREWLITE CHECKOUT · VNPAY SANDBOX</span>
             <h1 className="page-title">
-              Thanh toán đơn hàng #{createdOrder?.orderCode ?? orderId}
+              Thanh toán đơn hàng
             </h1>
+            <p className="checkout-order-reference">Mã đơn: {createdOrder?.orderCode ?? orderId}</p>
             <p className="page-lead">
-              Số tiền thanh toán được lấy trực tiếp từ máy chủ BrewLite. Kết
-              quả chỉ được công nhận sau khi backend xác minh IPN hoặc QueryDR
-              từ VNPay Sandbox.
+              Kiểm tra thông tin và hoàn tất thanh toán. Trạng thái đơn hàng sẽ được cập nhật khi giao dịch được xác nhận.
             </p>
 
             {createdOrder?.items && createdOrder.items.length > 0 && (
@@ -235,25 +234,25 @@ export function CheckoutView({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (cartLoading) {
     return (
-      <main className="brewlite-payment-scope">
+      <div className="brewlite-payment-scope">
         <div className="inner-page">
           <div className="empty-cart" role="status">
             <p>Đang tải giỏ hàng từ máy chủ BrewLite…</p>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (cartError) {
     return (
-      <main className="brewlite-payment-scope">
+      <div className="brewlite-payment-scope">
         <div className="inner-page">
           <div className="empty-cart" role="alert">
             <span className="section-kicker">BREWLITE CHECKOUT</span>
@@ -277,13 +276,13 @@ export function CheckoutView({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (cart.length === 0) {
     return (
-      <main className="brewlite-payment-scope">
+      <div className="brewlite-payment-scope">
         <div className="inner-page">
           <div className="empty-cart">
             <span className="section-kicker">BREWLITE CHECKOUT</span>
@@ -301,7 +300,7 @@ export function CheckoutView({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -386,7 +385,7 @@ export function CheckoutView({
   }
 
   return (
-    <main className="brewlite-payment-scope">
+    <div className="brewlite-payment-scope">
       <div className="inner-page">
         <span className="section-kicker">BREWLITE CHECKOUT · VNPAY SANDBOX</span>
         <h1 className="page-title">Kiểm tra &amp; xác nhận đơn hàng</h1>
@@ -511,7 +510,7 @@ export function CheckoutView({
           </aside>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -530,13 +529,13 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <main className="brewlite-payment-scope">
+        <div className="brewlite-payment-scope">
           <div className="inner-page">
             <div className="empty-cart" role="status">
               <p>Đang tải màn hình thanh toán BrewLite…</p>
             </div>
           </div>
-        </main>
+        </div>
       }
     >
       <CheckoutSearchParamsView />
