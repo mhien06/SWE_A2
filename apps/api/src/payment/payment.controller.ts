@@ -36,6 +36,14 @@ function resolveCurrentUserId(req: RequestWithAuth): string {
     return headerUser.trim();
   }
 
+  const authHeader = req.headers?.["authorization"];
+  if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (token.startsWith("demo-user-")) {
+      return token;
+    }
+  }
+
   throw new UnauthorizedException({
     code: "UNAUTHORIZED",
     message: "Authentication is required.",

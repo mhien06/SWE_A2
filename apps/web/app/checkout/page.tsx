@@ -27,16 +27,53 @@ export function CheckoutView({
   onClearCart,
   onNavigateToGateway,
 }: CheckoutViewProps) {
+  const [session, setSession] = useState<ClientSession | null>(initialSession);
+  const [cart, setCart] = useState<CartItemDraft[]>(initialCart);
   const [orderId, setOrderId] = useState<string | null>(initialOrderId);
   const [createdOrder, setCreatedOrder] =
     useState<OrderPaymentStatusDto | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  function loadDemoPreview(withExistingOrder: boolean) {
+    setSession({
+      accessToken: "demo-user-01",
+      account: {
+        id: "demo-user-01",
+        fullName: "Nguyễn Minh Hiển (Demo)",
+        email: "hien.demo@brewlite.local",
+        role: "CUSTOMER",
+      },
+    });
+    setCart([
+      {
+        key: "demo-1",
+        productId: "p-tra-dao",
+        name: "Trà Đào Cam Sả",
+        sizeName: "L",
+        toppings: [{ id: "t1", name: "Trân châu trắng" }],
+        unitPrice: 55_000,
+        quantity: 1,
+      },
+      {
+        key: "demo-2",
+        productId: "p-bac-xiu",
+        name: "Bạc Xỉu Đá",
+        sizeName: "M",
+        toppings: [],
+        unitPrice: 35_000,
+        quantity: 1,
+      },
+    ]);
+    if (withExistingOrder) {
+      setOrderId("demo-order-01");
+    }
+  }
+
   if (
-    initialSession &&
-    (initialSession.account.role === "STAFF" ||
-      initialSession.account.role === "MANAGER")
+    session &&
+    (session.account.role === "STAFF" ||
+      session.account.role === "MANAGER")
   ) {
     return (
       <div className="state-box" role="alert">
@@ -49,14 +86,29 @@ export function CheckoutView({
     );
   }
 
-  if (!initialSession) {
+  if (!session) {
     return (
       <div className="state-box">
         <h1>Đăng nhập để đặt hàng</h1>
         <p>BrewLite cần xác thực tài khoản trước khi tạo đơn và thanh toán VNPay.</p>
-        <Link className="back-link" href="/login?next=%2Fcheckout">
-          Đăng nhập để tiếp tục
-        </Link>
+        <div
+          style={{
+            display: "flex",
+            gap: ".75rem",
+            flexWrap: "wrap",
+            marginTop: "1rem",
+          }}
+        >
+          <Link className="back-link" href="/login?next=%2Fcheckout">
+            Đăng nhập để tiếp tục
+          </Link>
+          <button type="button" onClick={() => loadDemoPreview(false)}>
+            Xem thử bước 1: Giỏ hàng Checkout mẫu
+          </button>
+          <button type="button" onClick={() => loadDemoPreview(true)}>
+            Xem thử bước 2: Thanh toán VNPay (#BL-DEMO-01)
+          </button>
+        </div>
       </div>
     );
   }
@@ -114,14 +166,14 @@ export function CheckoutView({
 
         <PaymentPanel
           orderId={orderId}
-          token={initialSession.accessToken}
+          token={session.accessToken}
           onNavigateToGateway={onNavigateToGateway}
         />
       </div>
     );
   }
 
-  if (initialCart.length === 0) {
+  if (cart.length === 0) {
     return (
       <div className="state-box">
         <h1>Chưa có món để đặt</h1>
@@ -133,37 +185,49 @@ export function CheckoutView({
     );
   }
 
-  const estimatedTotal = initialCart.reduce(
+  const estimatedTotal = cart.reduce(
     (sum, item) => sum + Number(item.unitPrice) * Number(item.quantity),
     0,
   );
-  const totalCups = initialCart.reduce(
+  const totalCups = cart.reduce(
     (sum, item) => sum + Number(item.quantity),
     0,
   );
 
   async function handleCreateOrderAndPay() {
-    if (submitting || orderId || !initialSession) return;
+    if (submitting || orderId || !session) return;
     setSubmitting(true);
     setError("");
     try {
-      const items = initialCart.map((item) => ({
+      const items = cart.map((item) => ({
         productId: item.productId,
         sizeOptionId: item.sizeOptionId,
         toppingOptionIds: item.toppingOptionIds ?? [],
         quantity: item.quantity,
       }));
-      const order = await paymentApiRequest<OrderPaymentStatusDto>("/orders", {
-        method: "POST",
-        token: initialSession.accessToken,
-        body: JSON.stringify({ items }),
-      });
+      let order: OrderPaymentStatusDto;
+      try {
+        order = await paymentApiRequest<OrderPaymentStatusDto>("/orders", {
+          method: "POST",
+          token: session.accessToken,
+          body: JSON.stringify({ items }),
+        });
+      } catch (orderErr) {
+        if (session.accessToken === "demo-user-01") {
+          order = await paymentApiRequest<OrderPaymentStatusDto>(
+            "/orders/demo-order-01/payment-status",
+            { token: session.accessToken },
+          );
+        } else {
+          throw orderErr;
+        }
+      }
       setCreatedOrder(order);
       setOrderId(order.orderId);
       onClearCart?.();
       await startVnpayPayment(
         order.orderId,
-        initialSession.accessToken,
+        session.accessToken,
         onNavigateToGateway,
       );
     } catch (err) {
@@ -203,15 +267,15 @@ export function CheckoutView({
         >
           <h2>01. Khách hàng</h2>
           <p style={{ marginTop: ".35rem" }}>
-            <strong>{initialSession.account.fullName}</strong> (
-            {initialSession.account.email})
+            <strong>{session.account.fullName}</strong> (
+            {session.account.email})
           </p>
 
           <h2 style={{ marginTop: "1.25rem" }}>
             02. Món đã chọn ({totalCups} ly)
           </h2>
           <div style={{ marginTop: ".5rem" }}>
-            {initialCart.map((item) => (
+            {cart.map((item) => (
               <div
                 key={item.key}
                 style={{

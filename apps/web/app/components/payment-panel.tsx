@@ -46,6 +46,10 @@ export default function PaymentPanel({
   onSettled,
   onNavigateToGateway,
 }: PaymentPanelProps) {
+  const [fallbackToken, setFallbackToken] = useState<string | null>(() =>
+    orderId === "demo-order-01" ? "demo-user-01" : null,
+  );
+  const effectiveToken = token ?? fallbackToken;
   const [snapshot, setSnapshot] = useState<OrderPaymentStatusDto | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -53,7 +57,7 @@ export default function PaymentPanel({
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!token) return;
+    if (!effectiveToken) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -61,7 +65,7 @@ export default function PaymentPanel({
       try {
         const data = await paymentApiRequest<OrderPaymentStatusDto>(
           `/orders/${encodeURIComponent(orderId)}/payment-status`,
-          { token: token ?? undefined, cache: "no-store" },
+          { token: effectiveToken ?? undefined, cache: "no-store" },
         );
         if (cancelled) return;
         setSnapshot(data);
@@ -105,7 +109,7 @@ export default function PaymentPanel({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [orderId, token, refreshCount, onSettled]);
+  }, [orderId, effectiveToken, refreshCount, onSettled]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -113,11 +117,11 @@ export default function PaymentPanel({
   }, []);
 
   async function handlePayClick() {
-    if (busy || !token) return;
+    if (busy || !effectiveToken) return;
     setBusy(true);
     setError("");
     try {
-      await startVnpayPayment(orderId, token, onNavigateToGateway);
+      await startVnpayPayment(orderId, effectiveToken, onNavigateToGateway);
       setRefreshCount((v) => v + 1);
     } catch (err) {
       setError(
@@ -130,16 +134,24 @@ export default function PaymentPanel({
     }
   }
 
-  if (!token) {
+  if (!effectiveToken) {
     return (
       <div className="state-box" role="status">
         <p>Vui lòng đăng nhập để xem trạng thái thanh toán đã xác minh.</p>
-        <Link
-          className="back-link"
-          href={`/login?next=${encodeURIComponent(`/payment/return?orderId=${orderId}`)}`}
-        >
-          Đăng nhập
-        </Link>
+        <div style={{ display: "flex", gap: ".75rem", flexWrap: "wrap", marginTop: ".75rem" }}>
+          <Link
+            className="back-link"
+            href={`/login?next=${encodeURIComponent(`/payment/return?orderId=${orderId}`)}`}
+          >
+            Đăng nhập
+          </Link>
+          <button
+            type="button"
+            onClick={() => setFallbackToken("demo-user-01")}
+          >
+            Dùng phiên kiểm thử (demo-user-01)
+          </button>
+        </div>
       </div>
     );
   }

@@ -38,6 +38,49 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
   private readonly claimedLocks = new Set<string>();
   private txQueue: Promise<unknown> = Promise.resolve();
 
+  constructor() {
+    const now = Date.now();
+    this.seedOrder(
+      {
+        id: "demo-order-01",
+        orderCode: "BL-DEMO-01",
+        userId: "demo-user-01",
+        status: "PENDING",
+        subtotal: 90_000,
+        discountAmount: 10_000,
+        totalAmount: 80_000,
+        pointsRedeemed: 100,
+        pointsDiscountAmount: 10_000,
+        vnpayPayableAmount: 80_000,
+        createdAt: new Date(now).toISOString(),
+        expiresAt: new Date(now + 15 * 60_000).toISOString(),
+        items: [
+          {
+            id: "demo-item-1",
+            productId: "p-tra-dao",
+            productNameSnapshot: "Trà Đào Cam Sả",
+            selectedSizeSnapshot: "L",
+            selectedToppingsSnapshot: ["Trân châu trắng"],
+            unitPriceSnapshot: 55_000,
+            quantity: 1,
+            lineTotal: 55_000,
+          },
+          {
+            id: "demo-item-2",
+            productId: "p-bac-xiu",
+            productNameSnapshot: "Bạc Xỉu Đá",
+            selectedSizeSnapshot: "M",
+            selectedToppingsSnapshot: [],
+            unitPriceSnapshot: 35_000,
+            quantity: 1,
+            lineTotal: 35_000,
+          },
+        ],
+      },
+      { initialPointsBalance: 250 },
+    );
+  }
+
   seedOrder(
     order: OrderSnapshotForPayment,
     options?: { insufficientIngredients?: boolean; initialPointsBalance?: number },
