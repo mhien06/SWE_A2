@@ -1,0 +1,14 @@
+# Task 5.1 – Báo cáo tái sử dụng giao diện cũ (Checkout & Payment Return)
+
+> **Người thực hiện:** Nguyễn Minh Hiển (`@mhien06`) — Issue #22
+> **Nguồn tham khảo:** `mhien06/BrewLite_A2` (nhánh `feat/sprint-2-integration`)
+> **Mục đích:** Tận dụng bố cục, luồng thao tác và cấu trúc hiển thị trạng thái từ đồ án cũ, đồng thời chuyển sang TypeScript (`.tsx`) và cập nhật đầy đủ theo nghiệp vụ mới của **SWE_A2** (tách `OrderStatus` / `PaymentStatus`, hiển thị điểm quy đổi `pointsRedeemed`, số tiền thực trả `vnpayPayableAmount`, trạng thái ngoại lệ `PAYMENT_EXCEPTION` và bù điểm BrewLite).
+
+## Bảng đối chiếu các tệp đã chuyển đổi
+
+| File cũ (`BrewLite_A2`) | File mới (`SWE_A2`) | Phần tái sử dụng | Phần thay đổi / nâng cấp theo nghiệp vụ mới |
+|---|---|---|---|
+| `apps/web/app/checkout/page.jsx` | `apps/web/app/checkout/page.tsx` | Bố cục 2 cột (thông tin khách hàng + danh sách món đã chọn bên trái, thẻ tổng kết thanh toán bên phải), kiểm tra quyền truy cập (`STAFF`/`MANAGER`), trạng thái giỏ trống/chưa đăng nhập, chống bấm đúp khi gửi yêu cầu. | Chuyển từ `.jsx` sang `.tsx` có kiểu dữ liệu chặt chẽ; tách `CheckoutView` nhận props linh hoạt; đồng bộ bảng màu `--brown`, `--cream`, `--line` của `Menu` Task 4.3; gọi `/payments` kèm header `Idempotency-Key` và hiển thị rõ hạn đơn 15 phút / hạn lượt thanh toán 5 phút. |
+| `apps/web/app/payment/return/page.jsx` | `apps/web/app/payment/return/page.tsx` | Luồng nhận `orderId` từ `searchParams`, bỏ qua toàn bộ `vnp_ResponseCode` trên URL trình duyệt và ủy quyền hiển thị cho `PaymentPanel` đọc dữ liệu đã xác minh từ backend. | Hỗ trợ mã đơn dạng UUID/chuỗi định danh của `SWE_A2`; bổ sung kiểm tra hợp lệ đầu vào và thông báo lỗi rõ ràng (`role="alert"`). |
+| `apps/web/app/components/payment-panel.jsx` | `apps/web/app/components/payment-panel.tsx` + `apps/web/app/lib/payment-client.ts` | Cơ chế lưu `Idempotency-Key` theo `orderId` trong `sessionStorage`, bộ đếm ngược thời gian còn lại, polling trạng thái 5 giây/lần khi `PENDING`/`UNKNOWN`, nút `Tiếp tục thanh toán` / `Thanh toán lại` / `Kiểm tra trạng thái`. | Tách biệt rõ `OrderStatus` (`PENDING`, `PAYMENT_FAILED`, `PAYMENT_EXCEPTION`, `PAID`, `CANCELLED`) và `PaymentStatus` (`PENDING`, `SUCCEEDED`, `FAILED`, `UNKNOWN`, `EXPIRED`); hiển thị chi tiết `totalAmount`, `pointsRedeemed`, `pointsDiscountAmount`, `vnpayPayableAmount`; bổ sung thông báo nghiệp vụ cho nhánh thiếu nguyên liệu (`PAYMENT_EXCEPTION`) và thanh toán đến muộn sau khi hủy (`CANCELLED` + `SUCCEEDED`). |
+| `apps/web/app/checkout/page.test.jsx` & `apps/web/app/components/payment-panel.test.jsx` | `apps/web/app/checkout/page.test.tsx` & `apps/web/app/components/payment-panel.test.tsx` | Cấu trúc kiểm thử bằng `@testing-library/react` và `vitest`. | Bổ sung kiểm thử chống gửi trùng khi double-click, kiểm thử hiển thị `vnpayPayableAmount`, kiểm thử không tin `vnp_ResponseCode=00` trên Return URL khi DB đang `UNKNOWN`, và kiểm thử hiển thị ngoại lệ `PAYMENT_EXCEPTION`. |
