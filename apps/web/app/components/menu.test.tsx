@@ -37,7 +37,7 @@ describe("Menu", () => {
     render(<Menu />);
     expect(screen.getByRole("status")).toHaveTextContent("Đang tải thực đơn");
     expect(await screen.findByText("Cà phê sữa")).toBeInTheDocument();
-    expect(screen.getByText("29.000đ")).toBeInTheDocument();
+    expect(screen.getByText("30.000đ")).toBeInTheDocument();
   });
 
   it("shows the empty state", async () => {
