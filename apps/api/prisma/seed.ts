@@ -18,26 +18,26 @@ const prisma = new PrismaClient({
 const products = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    name: "CÃ  phÃª sá»¯a",
-    description: "CÃ  phÃª Ä‘áº­m vá»‹ hÃ²a cÃ¹ng sá»¯a Ä‘áº·c ngá»t dá»‹u.",
+    name: "Cà phê sữa",
+    description: "Cà phê đậm vị hòa cùng sữa đặc ngọt dịu.",
     basePrice: 29000,
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    name: "Báº¡c xá»‰u",
-    description: "Nhiá»u sá»¯a, Ã­t cÃ  phÃª, má»m máº¡i vÃ  dá»… uá»‘ng.",
+    name: "Bạc xỉu",
+    description: "Nhiều sữa, ít cà phê, mềm mại và dễ uống.",
     basePrice: 32000,
   },
   {
     id: "33333333-3333-4333-8333-333333333333",
-    name: "TrÃ  Ä‘Ã o",
-    description: "TrÃ  thanh mÃ¡t káº¿t há»£p Ä‘Ã o thÆ¡m vÃ  vá»‹ chua nháº¹.",
+    name: "Trà đào",
+    description: "Trà thanh mát kết hợp đào thơm và vị chua nhẹ.",
     basePrice: 35000,
   },
   {
     id: "44444444-4444-4444-8444-444444444444",
     name: "Matcha latte",
-    description: "Matcha thÆ¡m dá»‹u hÃ²a quyá»‡n cÃ¹ng sá»¯a tÆ°Æ¡i.",
+    description: "Matcha thơm dịu hòa quyện cùng sữa tươi.",
     basePrice: 39000,
   },
 ] as const;
@@ -48,17 +48,17 @@ const options = [
   { type: ProductOptionType.SIZE, name: "L", additionalPrice: 10000 },
   {
     type: ProductOptionType.TOPPING,
-    name: "TrÃ¢n chÃ¢u",
+    name: "Trân châu",
     additionalPrice: 8000,
   },
   {
     type: ProductOptionType.TOPPING,
-    name: "Kem sá»¯a",
+    name: "Kem sữa",
     additionalPrice: 10000,
   },
   {
     type: ProductOptionType.TOPPING,
-    name: "Tháº¡ch cÃ  phÃª",
+    name: "Thạch cà phê",
     additionalPrice: 7000,
   },
 ] as const;
@@ -79,17 +79,26 @@ async function seed() {
       },
     });
 
-    await prisma.productOption.deleteMany({
-      where: { productId: product.id },
-    });
-
-    await prisma.productOption.createMany({
-      data: options.map((option) => ({
-        ...option,
-        productId: product.id,
-        isAvailable: true,
-      })),
-    });
+    for (const option of options) {
+      await prisma.productOption.upsert({
+        where: {
+          productId_type_name: {
+            productId: product.id,
+            type: option.type,
+            name: option.name,
+          },
+        },
+        update: {
+          additionalPrice: option.additionalPrice,
+          isAvailable: true,
+        },
+        create: {
+          ...option,
+          productId: product.id,
+          isAvailable: true,
+        },
+      });
+    }
   }
 }
 
