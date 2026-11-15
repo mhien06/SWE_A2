@@ -3,14 +3,14 @@
 | Thuộc tính | Trạng thái |
 |---|---|
 | Repo/nhánh tài liệu | [SWE_A2](https://github.com/mhien06/SWE_A2), `develop` |
-| Local development | Docker Compose; xem [README](../README.md#chạy-môi-trường-phát-triển-docker) |
+| Local development | Docker Compose; xem [README](../README.md#môi-trường-phát-triển-docker) |
 | Deployment design | [Task 3.2 – Deployment Diagram](architecture/deployment.md) |
 | Production deployment / URL | **Pending** — chưa có bằng chứng triển khai SWE_A2; owner @mhien06 / @tp9951819-cell, [#25](https://github.com/mhien06/SWE_A2/issues/25) |
 | API health evidence | **Pending** — tích hợp health check/test ở [#23](https://github.com/mhien06/SWE_A2/issues/23), deploy verification ở [#25](https://github.com/mhien06/SWE_A2/issues/25) |
 
 ## Local run
 
-Thực hiện đúng các lệnh, biến môi trường và lưu ý dữ liệu trong [README môi trường Docker](../README.md#chạy-môi-trường-phát-triển-docker). README hiện mô tả scaffold local và endpoint API scaffold; chưa có luồng nghiệp vụ. Không tự chạy migration hoặc xóa volume ngoài hướng dẫn.
+Thực hiện đúng các lệnh, biến môi trường và lưu ý dữ liệu trong [README môi trường Docker](../README.md#môi-trường-phát-triển-docker). README hiện mô tả scaffold local và endpoint API scaffold; chưa có luồng nghiệp vụ. Không tự chạy migration hoặc xóa volume ngoài hướng dẫn.
 
 ## Tài liệu thiết kế và vận hành thực tế
 
