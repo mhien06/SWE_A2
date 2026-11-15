@@ -10,11 +10,11 @@
 
 | Method | Endpoint | Quyền | Mục đích |
 |---|---|---|---|
-| `POST` | `/payments` *(và `/orders/:id/payments`)* | `CUSTOMER` (chủ đơn) | Tạo lượt thanh toán VNPay Sandbox (`Payment` attempt) với header `Idempotency-Key`. |
-| `GET` | `/payments/:id` | `CUSTOMER` (chủ đơn) | Lấy chi tiết và trạng thái đã xác minh của một lượt thanh toán. |
-| `GET` | `/orders/:id/payment-status` | `CUSTOMER` (chủ đơn) | Lấy snapshot trạng thái đơn hàng (`OrderStatus`), các khoản tiền chính thức (`totalAmount`, `pointsRedeemed`, `pointsDiscountAmount`, `vnpayPayableAmount`), lượt thanh toán mới nhất và cờ `canPay` / `canRetry` / `needsReview`. |
+| `POST` | `/payments` *(và `/orders/:id/payments`)* | `JwtAuthGuard` + `RolesGuard` (`@Roles("CUSTOMER")`, chủ đơn) | Tạo lượt thanh toán VNPay Sandbox (`Payment` attempt) với DTO kiểm tra (`CreatePaymentDto` / `CreateOrderPaymentDto`) và header `Idempotency-Key`. |
+| `GET` | `/payments/:id` | `JwtAuthGuard` + `RolesGuard` (`@Roles("CUSTOMER")`, chủ đơn, `ParseUUIDPipe`) | Lấy chi tiết và trạng thái đã xác minh của một lượt thanh toán. |
+| `GET` | `/orders/:id/payment-status` | `JwtAuthGuard` + `RolesGuard` (`@Roles("CUSTOMER")`, chủ đơn, `ParseUUIDPipe`) | Lấy snapshot trạng thái đơn hàng (`OrderStatus`), các khoản tiền chính thức (`totalAmount`, `pointsRedeemed`, `pointsDiscountAmount`, `vnpayPayableAmount`), lượt thanh toán mới nhất và cờ `canPay` / `canRetry` / `needsReview`. |
 | `GET` | `/payments/vnpay/ipn` | Public (VNPay Server-to-Server) | Nhận IPN từ VNPay Sandbox, xác minh chữ ký HMAC-SHA512, `vnp_TmnCode`, `vnp_TxnRef`, `vnp_Amount` và gọi hàm giao dịch xử lý kết quả thanh toán dùng chung. Trả `RspCode` (`00`, `01`, `02`, `04`, `97`, `99`). |
-| `GET` | `/payments/vnpay/return` | Public | Kiểm tra chữ ký tham số Return URL để hỗ trợ điều hướng hiển thị (`authoritative: false`, tuyệt đối không cập nhật `Order`/`Payment`). |
+| `GET` | `/payments/vnpay/return` | Public | Kiểm tra chữ ký tham số Return URL để hỗ trợ điều hướng hiển thị (`authoritative: false`, tuyệt đối không cập nhật `Order`/`Payment`). Frontend hỗ trợ cả `/payment/return` và `/checkout/return`. |
 
 ### Request / Response mẫu khi tạo Payment
 
@@ -136,9 +136,10 @@ model VNPayRefundRecord {
 
 ---
 
-## 3. Giao diện Transaction Port (`PAYMENT_REPOSITORY_PORT` & `PaymentCompensationService`)
+## 3. Giao diện Transaction Port & Tích hợp Prisma (`PAYMENT_REPOSITORY_PORT` & `PAYMENT_COMPENSATION_PORT`)
 
-- Toàn bộ logic thanh toán của Hiển được đóng gói qua port `PAYMENT_REPOSITORY_PORT` (`apps/api/src/payment/payment.contracts.ts`) và `PaymentCompensationService` (`apps/api/src/payment/payment-compensation.service.ts`).
-- Khi Khoa hoàn tất `OrderModule`, `InventoryModule`, `LoyaltyModule`:
-  1. **Khi xác minh thanh toán thành công (`PaymentSettlementService.settle`):** gọi `tx.deductIngredientsForOrder(orderId)` và `tx.recordLoyaltyTransaction(...)` trong cùng một Prisma transaction với khóa dòng `Order` → `Payment`.
-  2. **Khi Khoa xử lý hủy đơn đã `PAID` trước `PREPARING` (`OrderModule.cancelOrder`):** Khoa có thể inject `PaymentCompensationService` và gọi `compensateVerifiedPayment(tx, { userId, orderId, paymentId, actualPaidVnd })` để kiểm tra `VNPayRefundRecord` cũ và cấp điểm bù `VNPAY_COMPENSATION = ceil(actualPaidVnd / 100)` đúng một lần.
+- `PaymentModule` liên kết trực tiếp với `PrismaModule`, `AuthModule`, `InventoryModule`, `LoyaltyModule` và `VnpayModule`:
+  - `PAYMENT_REPOSITORY_PORT` (`apps/api/src/payment/payment.contracts.ts`) được cung cấp bởi `PrismaPaymentRepository` (`apps/api/src/payment/prisma-payment.store.ts`), sử dụng PostgreSQL row lock (`FOR UPDATE`, `FOR UPDATE SKIP LOCKED`) trong cùng Prisma `$transaction`.
+  - `PAYMENT_COMPENSATION_PORT` (`apps/api/src/order/payment-compensation.port.ts`) được cung cấp bởi `PrismaPaymentCompensationAdapter` và export cho `OrderModule` (`OrderService.cancelOrder`).
+1. **Khi xác minh thanh toán thành công (`PaymentSettlementService.settle`):** gọi `InventoryService.deductIngredientsForOrder(...)` và `LoyaltyService.recordInTransaction(...)` (EARN tính theo `LoyaltyService.getEarnPoints`) trong cùng một Prisma transaction với khóa dòng `Order` → `Payment`.
+2. **Khi hủy đơn đã `PAID` trước `PREPARING` (`OrderService.cancelOrder`):** gọi `PAYMENT_COMPENSATION_PORT.compensatePaidOrderCancellation(...)` để kiểm tra `VNPayRefundRecord` cũ và cấp điểm bù `VNPAY_COMPENSATION = ceil(actualPaidVnd / 100)` đúng một lần theo khóa `vnpay-comp:<paymentId>`.

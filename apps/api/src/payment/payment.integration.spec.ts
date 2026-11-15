@@ -1,20 +1,40 @@
-import type { INestApplication } from "@nestjs/common";
+import { ValidationPipe, type INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import { SignJWT } from "jose";
 import { createHmac } from "node:crypto";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { OrderModule } from "../order/order.module.js";
+import { OrderService } from "../order/order.service.js";
+import { PAYMENT_COMPENSATION_PORT } from "../order/payment-compensation.port.js";
+import { PrismaService } from "../prisma/prisma.service.js";
 import { PaymentReconciliationService } from "../scheduler/payment-reconciliation.service.js";
 import { SchedulerModule } from "../scheduler/scheduler.module.js";
 import {
   PAYMENT_GATEWAY,
   type PaymentGateway,
 } from "../vnpay/vnpay.types.js";
+import { PAYMENT_REPOSITORY_PORT } from "./payment.contracts.js";
 import { PaymentModule } from "./payment.module.js";
 import { InMemoryPaymentRepository } from "./prisma-payment.store.js";
 
 const secret = "integration-test-only-vnpay-sandbox-secret";
+const jwtSecret = "integration-test-jwt-secret-at-least-32-chars";
 const sign = (data: string) =>
   createHmac("sha512", secret).update(data, "utf8").digest("hex");
+
+async function signAccessToken(user: {
+  id: string;
+  email: string;
+  role: "CUSTOMER" | "STAFF" | "MANAGER";
+}): Promise<string> {
+  return new SignJWT({ email: user.email, role: user.role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(user.id)
+    .setIssuedAt()
+    .setExpirationTime("15m")
+    .sign(new TextEncoder().encode(jwtSecret));
+}
 
 function buildSignedIpnQuery(
   params: {
@@ -55,12 +75,19 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
   let reconciliation: PaymentReconciliationService;
   let gateway: PaymentGateway;
 
-  const userId = "customer-1111";
-  const otherUserId = "customer-2222";
+  const userId = "11111111-1111-4111-8111-111111111111";
+  const otherUserId = "22222222-2222-4222-8222-222222222222";
+  const staffUserId = "33333333-3333-4333-8333-333333333333";
   const orderId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  let customerToken: string;
+  let otherCustomerToken: string;
+  let staffToken: string;
 
   beforeEach(async () => {
     process.env.NODE_ENV = "test";
+    process.env.JWT_SECRET = jwtSecret;
+    process.env.LOYALTY_EARN_POINTS_PER_VND = "0.001";
+    process.env.LOYALTY_EARN_ROUNDING = "FLOOR";
     process.env.VNP_TMN_CODE = "TESTCODE";
     process.env.VNP_HASH_SECRET = secret;
     process.env.VNP_PAY_URL =
@@ -69,16 +96,43 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
       "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction";
     process.env.VNP_RETURN_URL = "http://localhost:3000/payment/return";
 
+    repository = new InMemoryPaymentRepository();
     const moduleRef = await Test.createTestingModule({
-      imports: [PaymentModule, SchedulerModule],
-    }).compile();
+      imports: [PaymentModule, SchedulerModule, OrderModule],
+    })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .overrideProvider(PAYMENT_REPOSITORY_PORT)
+      .useValue(repository)
+      .compile();
 
     app = moduleRef.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
     await app.init();
 
-    repository = app.get(InMemoryPaymentRepository);
     reconciliation = app.get(PaymentReconciliationService);
     gateway = app.get(PAYMENT_GATEWAY);
+    customerToken = await signAccessToken({
+      id: userId,
+      email: "customer1@brewlite.local",
+      role: "CUSTOMER",
+    });
+    otherCustomerToken = await signAccessToken({
+      id: otherUserId,
+      email: "customer2@brewlite.local",
+      role: "CUSTOMER",
+    });
+    staffToken = await signAccessToken({
+      id: staffUserId,
+      email: "staff@brewlite.local",
+      role: "STAFF",
+    });
 
     const now = new Date();
     repository.seedOrder(
@@ -105,30 +159,42 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
     process.env = { ...originalEnv };
   });
 
-  it("covers creation, ownership, idempotency replay, concurrent attempt protection and client amount rejection (Scenarios 1, 2, 4, 5)", async () => {
+  it("wires OrderModule and PAYMENT_COMPENSATION_PORT together in Nest DI", () => {
+    expect(app.get(OrderService)).toBeDefined();
+    expect(app.get(PAYMENT_COMPENSATION_PORT)).toBeDefined();
+  });
+
+  it("covers creation, ownership, RBAC, idempotency replay, concurrent attempt protection and client amount rejection (Scenarios 1, 2, 4, 5)", async () => {
     const server = app.getHttpServer();
 
     // Không có header xác thực -> 401
     await request(server).post("/payments").send({ orderId }).expect(401);
 
+    // STAFF không được gọi endpoint thanh toán của CUSTOMER -> 403
+    await request(server)
+      .post("/payments")
+      .set("Authorization", `Bearer ${staffToken}`)
+      .send({ orderId })
+      .expect(403);
+
     // User khác truy cập đơn -> 404
     await request(server)
       .post("/payments")
-      .set("x-user-id", otherUserId)
+      .set("Authorization", `Bearer ${otherCustomerToken}`)
       .send({ orderId })
       .expect(404);
 
-    // Client cố tình truyền amount -> 400
+    // Client cố tình truyền amount -> 400 (ValidationPipe forbidNonWhitelisted)
     await request(server)
       .post(`/orders/${orderId}/payments`)
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .send({ amount: 1000 })
       .expect(400);
 
     // Tạo attempt hợp lệ
     const first = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-001")
       .send({ orderId })
       .expect(201);
@@ -140,7 +206,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
     // Gửi lặp cùng Idempotency-Key -> trả cùng paymentId
     const replay = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-001")
       .send({ orderId })
       .expect(201);
@@ -149,7 +215,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
     // Gửi một key khác khi attempt trước vẫn đang PENDING -> bị chặn 409 (không tạo attempt cạnh tranh)
     await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-002")
       .send({ orderId })
       .expect(409);
@@ -160,7 +226,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
 
     const created = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-ipn-1")
       .send({ orderId })
       .expect(201);
@@ -230,7 +296,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
 
     const first = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-fail-then-retry")
       .send({ orderId })
       .expect(201);
@@ -251,14 +317,14 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
     // Kiểm tra trạng thái cho phép retry
     const statusRes = await request(server)
       .get(`/orders/${orderId}/payment-status`)
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .expect(200);
     expect(statusRes.body.canRetry).toBe(true);
 
     // Tạo attempt thứ 2 với key mới -> tạo mã giao dịch mới
     const second = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-retry-2")
       .send({ orderId })
       .expect(201);
@@ -297,7 +363,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
 
     const attempt = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-late-success")
       .send({ orderId })
       .expect(201);
@@ -310,7 +376,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
     // Không cho tạo Payment mới trên đơn đã CANCELLED (Scenario 3)
     await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-after-cancel")
       .send({ orderId })
       .expect(409);
@@ -336,7 +402,7 @@ describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
 
     const attempt = await request(server)
       .post("/payments")
-      .set("x-user-id", userId)
+      .set("Authorization", `Bearer ${customerToken}`)
       .set("Idempotency-Key", "key-rollback")
       .send({ orderId })
       .expect(201);

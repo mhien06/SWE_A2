@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatVndPrice } from "../catalog";
+import "../payment/payment-theme.css";
+import { useAuthSession } from "./auth-session";
 import {
   clearStoredIdempotencyKey,
   paymentApiRequest,
@@ -36,6 +38,7 @@ export interface PaymentPanelProps {
   token?: string | null;
   returnedFromGateway?: boolean;
   onSettled?: (snapshot: OrderPaymentStatusDto) => void;
+  onSnapshot?: (snapshot: OrderPaymentStatusDto) => void;
   onNavigateToGateway?: (url: string) => void;
 }
 
@@ -44,12 +47,13 @@ export default function PaymentPanel({
   token,
   returnedFromGateway = false,
   onSettled,
+  onSnapshot,
   onNavigateToGateway,
 }: PaymentPanelProps) {
-  const [fallbackToken, setFallbackToken] = useState<string | null>(() =>
-    orderId === "demo-order-01" ? "demo-user-01" : null,
-  );
-  const effectiveToken = token ?? fallbackToken;
+  const { session, ready } = useAuthSession();
+  const effectiveToken = token ?? session?.accessToken ?? null;
+  const authIsReady = Boolean(token) || ready;
+
   const [snapshot, setSnapshot] = useState<OrderPaymentStatusDto | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,6 +73,7 @@ export default function PaymentPanel({
         );
         if (cancelled) return;
         setSnapshot(data);
+        onSnapshot?.(data);
         setError("");
         setNow(Date.now());
 
@@ -109,7 +114,7 @@ export default function PaymentPanel({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [orderId, effectiveToken, refreshCount, onSettled]);
+  }, [orderId, effectiveToken, refreshCount, onSettled, onSnapshot]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -135,22 +140,30 @@ export default function PaymentPanel({
   }
 
   if (!effectiveToken) {
+    if (!authIsReady) {
+      return (
+        <div className="brewlite-payment-scope">
+          <section className="payment-panel" role="status">
+            <p>Đang kiểm tra phiên đăng nhập…</p>
+          </section>
+        </div>
+      );
+    }
     return (
-      <div className="state-box" role="status">
-        <p>Vui lòng đăng nhập để xem trạng thái thanh toán đã xác minh.</p>
-        <div style={{ display: "flex", gap: ".75rem", flexWrap: "wrap", marginTop: ".75rem" }}>
-          <Link
-            className="back-link"
-            href={`/login?next=${encodeURIComponent(`/payment/return?orderId=${orderId}`)}`}
-          >
-            Đăng nhập
-          </Link>
-          <button
-            type="button"
-            onClick={() => setFallbackToken("demo-user-01")}
-          >
-            Dùng phiên kiểm thử (demo-user-01)
-          </button>
+      <div className="brewlite-payment-scope">
+        <div className="payment-panel" role="status">
+          <p>Vui lòng đăng nhập để xem trạng thái thanh toán đã xác minh.</p>
+          <div className="actions-row">
+            <Link
+              className="button button-primary"
+              href={`/login?next=${encodeURIComponent(`/payment/return?orderId=${orderId}`)}`}
+            >
+              Đăng nhập
+            </Link>
+            <Link className="button button-outline" href="/orders">
+              Lịch sử đơn hàng
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -184,183 +197,175 @@ export default function PaymentPanel({
     !returnedFromGateway;
 
   let headline = "Đang tải trạng thái…";
+  let statusBadgeClass = "order-status";
+
   if (snapshot) {
     if (snapshot.orderStatus === "PAYMENT_EXCEPTION") {
       headline = "Giao dịch phát sinh ngoại lệ (thiếu nguyên liệu)";
+      statusBadgeClass = "order-status order-status--danger";
     } else if (
       snapshot.orderStatus === "CANCELLED" &&
       payment?.status === "SUCCEEDED"
     ) {
       headline = "Thanh toán đến muộn sau khi đơn đã hủy";
+      statusBadgeClass = "order-status order-status--warn";
     } else if (snapshot.needsReview) {
       headline = "Giao dịch cần kiểm tra / đối soát";
+      statusBadgeClass = "order-status order-status--warn";
     } else if (isWaitingVerification) {
       headline = "Đang xác minh kết quả thanh toán";
+      statusBadgeClass = "order-status order-status--warn";
     } else if (payment) {
       headline = paymentStatusLabels[payment.status];
+      if (payment.status === "FAILED" || payment.status === "EXPIRED") {
+        statusBadgeClass = "order-status order-status--danger";
+      }
     } else {
       headline = "Đơn chưa khởi tạo lượt thanh toán";
     }
   }
 
   return (
-    <section
-      className="payment-panel"
-      aria-label={`Thanh toán đơn ${orderId}`}
-      style={{
-        marginTop: "1.25rem",
-        padding: "1.25rem",
-        background: "#fffaf4",
-        border: "1px solid var(--line)",
-        borderRadius: "1rem",
-      }}
-    >
-      <p role="status" aria-live="polite" style={{ fontSize: "1.05rem" }}>
-        <strong>{headline}</strong>
-      </p>
-
-      {snapshot && (
+    <div className="brewlite-payment-scope">
+      <section
+        className="payment-panel"
+        aria-label={`Thanh toán đơn ${orderId}`}
+      >
         <div
           style={{
-            marginTop: ".75rem",
-            display: "grid",
-            gap: ".35rem",
-            fontSize: ".9rem",
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "10px",
           }}
         >
-          <div>
-            <span>Trạng thái đơn hàng: </span>
-            <strong>{orderStatusLabels[snapshot.orderStatus]}</strong>
-          </div>
-          <div>
-            <span>Tổng tiền đơn hàng: </span>
-            <strong>{formatVndPrice(snapshot.totalAmount)}</strong>
-          </div>
-          {snapshot.pointsRedeemed > 0 && (
-            <div>
-              <span>Điểm BrewLite đã dùng ({snapshot.pointsRedeemed} điểm): </span>
-              <strong>-{formatVndPrice(snapshot.pointsDiscountAmount)}</strong>
-            </div>
+          <p role="status" aria-live="polite" style={{ fontSize: "1.05rem", margin: 0 }}>
+            <strong>{headline}</strong>
+          </p>
+          {snapshot && (
+            <span className={statusBadgeClass}>
+              {orderStatusLabels[snapshot.orderStatus]}
+            </span>
           )}
-          <div>
-            <span>Số tiền VNPay thực trả: </span>
-            <strong data-testid="vnpay-payable-amount">
-              {formatVndPrice(snapshot.vnpayPayableAmount)}
-            </strong>
-          </div>
-          {orderRemainingSec > 0 &&
-            (snapshot.orderStatus === "PENDING" ||
-              snapshot.orderStatus === "PAYMENT_FAILED") && (
-              <div>
-                <span>Thời hạn thanh toán đơn: </span>
-                <strong>
-                  {Math.floor(orderRemainingSec / 60)}:
-                  {String(orderRemainingSec % 60).padStart(2, "0")}
-                </strong>
+        </div>
+
+        {snapshot && (
+          <div className="summary-rows">
+            <div className="summary-row">
+              <span>Tổng tiền đơn hàng</span>
+              <strong>{formatVndPrice(snapshot.totalAmount)}</strong>
+            </div>
+            {snapshot.pointsRedeemed > 0 && (
+              <div className="summary-row">
+                <span>Điểm BrewLite đã dùng ({snapshot.pointsRedeemed} điểm)</span>
+                <strong>-{formatVndPrice(snapshot.pointsDiscountAmount)}</strong>
               </div>
             )}
-        </div>
-      )}
+            <div className="summary-row summary-total">
+              <span>Số tiền VNPay thực trả</span>
+              <strong data-testid="vnpay-payable-amount">
+                {formatVndPrice(snapshot.vnpayPayableAmount)}
+              </strong>
+            </div>
+            {orderRemainingSec > 0 &&
+              (snapshot.orderStatus === "PENDING" ||
+                snapshot.orderStatus === "PAYMENT_FAILED") && (
+                <div className="summary-row">
+                  <span>Thời hạn thanh toán đơn</span>
+                  <strong>
+                    {Math.floor(orderRemainingSec / 60)}:
+                    {String(orderRemainingSec % 60).padStart(2, "0")}
+                  </strong>
+                </div>
+              )}
+          </div>
+        )}
 
-      {snapshot?.orderStatus === "PAYMENT_EXCEPTION" && (
-        <p style={{ marginTop: ".75rem", color: "#8a2d1b" }}>
-          VNPay đã xác nhận thu tiền nhưng nguyên liệu tại quầy không còn đủ để
-          pha chế. Đơn không chuyển sang pha chế và hệ thống bù điểm BrewLite
-          theo chính sách (1 điểm / 100đ, làm tròn lên).
-        </p>
-      )}
+        {snapshot?.orderStatus === "PAYMENT_EXCEPTION" && (
+          <div className="notice-card">
+            VNPay đã xác nhận thu tiền nhưng nguyên liệu tại quầy không còn đủ
+            để pha chế. Đơn không chuyển sang pha chế và hệ thống bù điểm
+            BrewLite theo chính sách (1 điểm / 100đ, làm tròn lên).
+          </div>
+        )}
 
-      {snapshot?.orderStatus === "CANCELLED" &&
-        payment?.status === "SUCCEEDED" && (
-          <p style={{ marginTop: ".75rem", color: "#8a2d1b" }}>
-            Kết quả thanh toán đến sau khi đơn đã hủy. Đơn không được mở lại và
-            giá trị thanh toán được đối soát bù bằng điểm BrewLite.
+        {snapshot?.orderStatus === "CANCELLED" &&
+          payment?.status === "SUCCEEDED" && (
+            <div className="notice-card">
+              Kết quả thanh toán đến sau khi đơn đã hủy. Đơn không được mở lại
+              và giá trị thanh toán được đối soát bù bằng điểm BrewLite.
+            </div>
+          )}
+
+        {snapshot?.needsReview &&
+          snapshot.orderStatus !== "PAYMENT_EXCEPTION" && (
+            <div className="notice-card">
+              Hệ thống đã ghi nhận giao dịch cần đối soát. Vui lòng kiểm tra
+              chi tiết đơn hàng hoặc liên hệ cửa hàng.
+            </div>
+          )}
+
+        {isWaitingVerification && (
+          <div className="notice-card">
+            BrewLite đang xác minh kết quả từ VNPay Sandbox (IPN/QueryDR). Vui
+            lòng chờ xác minh và không tạo giao dịch mới để tránh thanh toán
+            trùng.
+          </div>
+        )}
+
+        {canContinueExistingAttempt && (
+          <p className="item-meta" style={{ marginTop: "12px" }}>
+            Thời gian còn lại của lượt thanh toán:{" "}
+            <strong>
+              {Math.floor(attemptRemainingSec / 60)}:
+              {String(attemptRemainingSec % 60).padStart(2, "0")}
+            </strong>
           </p>
         )}
 
-      {snapshot?.needsReview &&
-        snapshot.orderStatus !== "PAYMENT_EXCEPTION" && (
-          <p style={{ marginTop: ".75rem" }}>
-            Hệ thống đã ghi nhận giao dịch cần đối soát. Vui lòng kiểm tra chi
-            tiết đơn hàng hoặc liên hệ cửa hàng.
+        {error && (
+          <p className="error-card" role="alert">
+            {error}
           </p>
         )}
 
-      {isWaitingVerification && (
-        <p style={{ marginTop: ".75rem" }}>
-          BrewLite đang xác minh kết quả từ VNPay Sandbox (IPN/QueryDR). Vui
-          lòng chờ xác minh và không tạo giao dịch mới để tránh thanh toán trùng.
-        </p>
-      )}
+        <div className="actions-row">
+          {(snapshot?.canPay || snapshot?.canRetry) && (
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={busy}
+              onClick={handlePayClick}
+            >
+              {busy
+                ? "Đang mở VNPay…"
+                : snapshot.canRetry
+                  ? "Thanh toán lại"
+                  : "Thanh toán VNPay"}
+            </button>
+          )}
 
-      {canContinueExistingAttempt && (
-        <p style={{ marginTop: ".75rem" }}>
-          Thời gian còn lại của lượt thanh toán:{" "}
-          <strong>
-            {Math.floor(attemptRemainingSec / 60)}:
-            {String(attemptRemainingSec % 60).padStart(2, "0")}
-          </strong>
-        </p>
-      )}
+          {canContinueExistingAttempt && payment?.paymentUrl && (
+            <a className="button button-primary" href={payment.paymentUrl}>
+              Tiếp tục thanh toán
+            </a>
+          )}
 
-      {error && (
-        <p
-          role="alert"
-          style={{ marginTop: ".75rem", color: "#b42318", fontWeight: 600 }}
-        >
-          {error}
-        </p>
-      )}
-
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: ".65rem",
-          marginTop: "1rem",
-        }}
-      >
-        {(snapshot?.canPay || snapshot?.canRetry) && (
-          <button type="button" disabled={busy} onClick={handlePayClick}>
-            {busy
-              ? "Đang mở VNPay…"
-              : snapshot.canRetry
-                ? "Thanh toán lại"
-                : "Thanh toán VNPay"}
-          </button>
-        )}
-
-        {canContinueExistingAttempt && payment?.paymentUrl && (
-          <a
-            className="back-link"
-            href={payment.paymentUrl}
-            style={{ marginBottom: 0, background: "var(--brown)", color: "#fff" }}
+          <button
+            type="button"
+            className="button button-outline"
+            disabled={busy}
+            onClick={() => setRefreshCount((v) => v + 1)}
           >
-            Tiếp tục thanh toán
-          </a>
-        )}
+            Kiểm tra trạng thái
+          </button>
 
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setRefreshCount((v) => v + 1)}
-          style={{
-            background: "white",
-            color: "var(--brown-dark)",
-            border: "1px solid var(--line)",
-          }}
-        >
-          Kiểm tra trạng thái
-        </button>
-
-        <Link
-          className="back-link"
-          href={`/orders/${orderId}`}
-          style={{ marginBottom: 0 }}
-        >
-          Xem chi tiết đơn
-        </Link>
-      </div>
-    </section>
+          <Link className="button button-outline" href={`/orders/${orderId}`}>
+            Xem chi tiết đơn
+          </Link>
+        </div>
+      </section>
+    </div>
   );
 }

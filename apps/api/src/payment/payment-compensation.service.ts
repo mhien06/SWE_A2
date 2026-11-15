@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "../generated/prisma/client.js";
+import type { PaymentCompensationPort } from "../order/payment-compensation.port.js";
 import type { PaymentTransactionContext } from "./payment.contracts.js";
 import { computeVnpayCompensationPoints } from "./payment.types.js";
+import { PrismaPaymentRepository } from "./prisma-payment.store.js";
 
 export type CompensationOutcome =
   | "GRANTED"
@@ -121,5 +124,34 @@ export class PaymentCompensationService {
       idempotencyKey,
     });
     return created.points;
+  }
+}
+
+/**
+ * Cầu nối PaymentCompensationPort cho OrderModule khi hủy đơn đã PAID
+ * trong cùng Prisma.TransactionClient.
+ */
+@Injectable()
+export class PrismaPaymentCompensationAdapter
+  implements PaymentCompensationPort
+{
+  constructor(
+    private readonly compensationService: PaymentCompensationService,
+    private readonly prismaRepository: PrismaPaymentRepository,
+  ) {}
+
+  compensateVerifiedPayment(
+    tx: Prisma.TransactionClient,
+    input: {
+      userId: string;
+      orderId: string;
+      paymentId: string;
+      actualPaidVnd: number;
+    },
+  ) {
+    return this.compensationService.compensateVerifiedPayment(
+      this.prismaRepository.wrapTransactionClient(tx),
+      input,
+    );
   }
 }

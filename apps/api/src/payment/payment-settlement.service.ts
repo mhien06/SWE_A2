@@ -1,4 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { LoyaltyService } from "../loyalty/loyalty.service.js";
 import type { PaymentEvidence } from "../vnpay/vnpay.types.js";
 import { PaymentCompensationService } from "./payment-compensation.service.js";
 import {
@@ -19,6 +20,8 @@ export class PaymentSettlementService {
     @Inject(PAYMENT_REPOSITORY_PORT)
     private readonly repository: PaymentRepositoryPort,
     private readonly compensation: PaymentCompensationService,
+    @Optional()
+    private readonly loyaltyService?: LoyaltyService,
   ) {}
 
   /**
@@ -205,10 +208,12 @@ export class PaymentSettlementService {
         return "ACCEPTED";
       }
 
-      // Nhánh 3: Đủ nguyên liệu -> chuyển Order sang PAID và tích điểm EARN đúng 1 lần trên số tiền VNPay thực trả
+      // Nhánh 3: Đủ nguyên liệu -> chuyển Order sang PAID và tích điểm EARN theo LoyaltyService nếu đã cấu hình tỷ lệ
       await tx.updateOrderStatus(order.id, "PAID");
 
-      const earnPoints = Math.floor(payment.amount / 1000);
+      const earnPoints = this.loyaltyService
+        ? this.loyaltyService.getEarnPoints(payment.amount)
+        : 0;
       if (earnPoints > 0) {
         await tx.recordLoyaltyTransaction({
           userId: order.userId,

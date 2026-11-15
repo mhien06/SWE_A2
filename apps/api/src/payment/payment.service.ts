@@ -248,6 +248,7 @@ export class PaymentService {
       pointsDiscountAmount: order.pointsDiscountAmount,
       vnpayPayableAmount: order.vnpayPayableAmount,
       orderExpiresAt: order.expiresAt.toISOString(),
+      items: order.items ?? [],
       payment: latestPayment
         ? this.formatAttemptResponse(latestPayment, order)
         : null,

@@ -22,6 +22,17 @@ export type LoyaltyTransactionType =
   | "VNPAY_COMPENSATION"
   | "ADJUST";
 
+export interface OrderItemSnapshotForPayment {
+  id: string;
+  productId: string;
+  productNameSnapshot: string;
+  selectedSizeSnapshot: string;
+  selectedToppingsSnapshot: string[];
+  unitPriceSnapshot: number;
+  quantity: number;
+  lineTotal: number;
+}
+
 export interface OrderSnapshotForPayment {
   id: string;
   orderCode: string;
@@ -35,6 +46,7 @@ export interface OrderSnapshotForPayment {
   vnpayPayableAmount: number;
   createdAt: Date;
   expiresAt: Date;
+  items?: OrderItemSnapshotForPayment[];
 }
 
 export interface PaymentRecord {

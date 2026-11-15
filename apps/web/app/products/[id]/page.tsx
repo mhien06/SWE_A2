@@ -5,9 +5,9 @@ import {
   availabilityLabel,
   formatVndPrice,
   productImage,
-  splitOptions,
   type ProductDetail,
 } from "../../catalog";
+import ProductOptionsForm from "../../components/product-options-form";
 
 const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -29,8 +29,6 @@ export default async function ProductPage({
   if (!response.ok) throw new Error("Không tải được món");
 
   const product = (await response.json()) as ProductDetail;
-  const { sizes, toppings } = splitOptions(product.options);
-
   return (
     <>
       <Link className="back-link" href="/">← Menu</Link>
@@ -52,8 +50,7 @@ export default async function ProductPage({
           <p className="detail-description">{product.description}</p>
           <p className="detail-price">{formatVndPrice(product.basePrice)}</p>
 
-          <OptionGroup title="Chọn kích thước" options={sizes} />
-          <OptionGroup title="Topping" options={toppings} />
+          <ProductOptionsForm product={product} />
 
           <div className="availability">
             <span>Trạng thái</span>
@@ -62,26 +59,5 @@ export default async function ProductPage({
         </div>
       </article>
     </>
-  );
-}
-
-function OptionGroup({
-  title,
-  options,
-}: {
-  title: string;
-  options: ProductDetail["options"];
-}) {
-  return (
-    <section className="option-group">
-      <h2>{title}</h2>
-      <div className="option-list">
-        {options.map((option) => (
-          <span key={option.id}>
-            {option.name} · +{formatVndPrice(option.additionalPrice)}
-          </span>
-        ))}
-      </div>
-    </section>
   );
 }

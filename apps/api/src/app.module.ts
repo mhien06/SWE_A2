@@ -1,13 +1,30 @@
 import { Module } from "@nestjs/common";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
+import { AuthModule } from "./auth/auth.module.js";
+import { CartModule } from "./cart/cart.module.js";
+import { InventoryModule } from "./inventory/inventory.module.js";
+import { LoyaltyModule } from "./loyalty/loyalty.module.js";
+import { OrderModule } from "./order/order.module.js";
 import { PaymentModule } from "./payment/payment.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
 import { ProductModule } from "./product/product.module.js";
 import { SchedulerModule } from "./scheduler/scheduler.module.js";
+import { VnpayModule } from "./vnpay/vnpay.module.js";
 
 @Module({
-  imports: [PrismaModule, ProductModule, PaymentModule, SchedulerModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    CartModule,
+    InventoryModule,
+    LoyaltyModule,
+    OrderModule,
+    ProductModule,
+    VnpayModule,
+    PaymentModule,
+    SchedulerModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

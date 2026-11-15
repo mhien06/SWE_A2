@@ -1,7 +1,10 @@
 import type React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import CheckoutReturnPage from "../checkout/return/page";
+import { saveSession } from "../lib/api";
 import PaymentReturnPage from "../payment/return/page";
+import { AuthSessionProvider } from "./auth-session";
 import PaymentPanel from "./payment-panel";
 import type { OrderPaymentStatusDto } from "../lib/payment-client";
 
@@ -69,7 +72,11 @@ describe("PaymentPanel & PaymentReturnPage", () => {
       }),
     );
 
-    render(<PaymentPanel orderId="order-uuid-12" token="jwt-token" />);
+    render(
+      <AuthSessionProvider>
+        <PaymentPanel orderId="order-uuid-12" token="jwt-token" />
+      </AuthSessionProvider>,
+    );
 
     expect(
       await screen.findByRole("link", { name: "Tiếp tục thanh toán" }),
@@ -83,6 +90,16 @@ describe("PaymentPanel & PaymentReturnPage", () => {
   });
 
   it("never marks order PAID from forged Return URL vnp_ResponseCode=00 when backend is still PENDING/UNKNOWN", async () => {
+    saveSession({
+      accessToken: "jwt-token",
+      user: {
+        id: "user-1",
+        name: "Nguyễn Minh Hiển",
+        email: "hien@example.com",
+        role: "CUSTOMER",
+        pointsBalance: 0,
+      },
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -105,10 +122,9 @@ describe("PaymentPanel & PaymentReturnPage", () => {
         vnp_ResponseCode: "00",
         vnp_TransactionStatus: "00",
       }),
-      token: "jwt-token",
     });
 
-    render(view);
+    render(<AuthSessionProvider>{view}</AuthSessionProvider>);
 
     expect(
       await screen.findByText("Đang xác minh kết quả thanh toán"),
@@ -119,6 +135,47 @@ describe("PaymentPanel & PaymentReturnPage", () => {
     expect(
       screen.queryByRole("button", { name: "Thanh toán lại" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("also renders checkout/return safely with AuthSessionProvider", async () => {
+    saveSession({
+      accessToken: "jwt-token",
+      user: {
+        id: "user-1",
+        name: "Nguyễn Minh Hiển",
+        email: "hien@example.com",
+        role: "CUSTOMER",
+        pointsBalance: 0,
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...baseStatus,
+          payment: {
+            ...baseStatus.payment!,
+            status: "UNKNOWN",
+            awaitingVerification: true,
+            paymentUrl: null,
+          },
+        }),
+      }),
+    );
+
+    const view = await CheckoutReturnPage({
+      searchParams: Promise.resolve({
+        orderId: "order-uuid-12",
+        vnp_ResponseCode: "00",
+      }),
+    });
+
+    render(<AuthSessionProvider>{view}</AuthSessionProvider>);
+
+    expect(
+      await screen.findByText("Đang xác minh kết quả thanh toán"),
+    ).toBeInTheDocument();
   });
 
   it("shows retry button only when backend allows canRetry and clears old Idempotency-Key", async () => {
@@ -143,7 +200,11 @@ describe("PaymentPanel & PaymentReturnPage", () => {
       }),
     );
 
-    render(<PaymentPanel orderId="order-uuid-12" token="jwt-token" />);
+    render(
+      <AuthSessionProvider>
+        <PaymentPanel orderId="order-uuid-12" token="jwt-token" />
+      </AuthSessionProvider>,
+    );
 
     expect(
       await screen.findByRole("button", { name: "Thanh toán lại" }),
@@ -171,7 +232,11 @@ describe("PaymentPanel & PaymentReturnPage", () => {
       }),
     );
 
-    render(<PaymentPanel orderId="order-uuid-12" token="jwt-token" />);
+    render(
+      <AuthSessionProvider>
+        <PaymentPanel orderId="order-uuid-12" token="jwt-token" />
+      </AuthSessionProvider>,
+    );
 
     expect(
       await screen.findByText(

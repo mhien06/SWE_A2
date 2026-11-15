@@ -7,48 +7,28 @@ import {
   Headers,
   Inject,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
-  UnauthorizedException,
+  UseGuards,
 } from "@nestjs/common";
+import type { Request } from "express";
+import type { AuthenticatedUser } from "../auth/auth.types.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { Roles } from "../auth/roles.decorator.js";
+import { RolesGuard } from "../auth/roles.guard.js";
 import {
   PAYMENT_GATEWAY,
   type PaymentGateway,
 } from "../vnpay/vnpay.types.js";
+import {
+  CreateOrderPaymentDto,
+  CreatePaymentDto,
+} from "./dto/payment.dto.js";
 import { PaymentSettlementService } from "./payment-settlement.service.js";
 import { PaymentService } from "./payment.service.js";
-
-interface RequestWithAuth {
-  ip?: string;
-  user?: { id?: string; sub?: string; role?: string };
-  headers?: Record<string, string | string[] | undefined>;
-}
-
-function resolveCurrentUserId(req: RequestWithAuth): string {
-  const fromGuard = req.user?.id ?? req.user?.sub;
-  if (typeof fromGuard === "string" && fromGuard.trim().length > 0) {
-    return fromGuard.trim();
-  }
-
-  const headerUser = req.headers?.["x-user-id"];
-  if (typeof headerUser === "string" && headerUser.trim().length > 0) {
-    return headerUser.trim();
-  }
-
-  const authHeader = req.headers?.["authorization"];
-  if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.slice("Bearer ".length).trim();
-    if (token.startsWith("demo-user-")) {
-      return token;
-    }
-  }
-
-  throw new UnauthorizedException({
-    code: "UNAUTHORIZED",
-    message: "Authentication is required.",
-  });
-}
 
 @Controller()
 export class PaymentController {
@@ -60,38 +40,41 @@ export class PaymentController {
   ) {}
 
   @Post("payments")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
   createPayment(
-    @Body() body: { orderId?: string; idempotencyKey?: string } | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: CreatePaymentDto,
     @Headers("idempotency-key") headerKey: string | undefined,
-    @Req() req: RequestWithAuth,
+    @Req() req: Request,
   ) {
-    const userId = resolveCurrentUserId(req);
-    const orderId = body?.orderId;
-    if (typeof orderId !== "string" || !orderId.trim()) {
+    if ("amount" in (body as object)) {
       throw new BadRequestException({
-        code: "INVALID_ORDER_ID",
-        message: "orderId is required.",
+        code: "CLIENT_AMOUNT_FORBIDDEN",
+        message: "Client must not supply payment amount.",
       });
     }
-    const idempotencyKey = headerKey ?? body?.idempotencyKey;
+    const idempotencyKey = headerKey ?? body.idempotencyKey;
     const ipAddress = req.ip?.replace(/^::ffff:/, "") ?? "127.0.0.1";
     return this.paymentService.createAttempt({
-      userId,
-      orderId,
+      userId: user.id,
+      orderId: body.orderId,
       idempotencyKey,
       ipAddress,
     });
   }
 
   @Post("orders/:id/payments")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
   createOrderPayment(
-    @Param("id") orderId: string,
-    @Body() body: { idempotencyKey?: string; amount?: unknown } | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) orderId: string,
+    @Body() body: CreateOrderPaymentDto | undefined,
     @Headers("idempotency-key") headerKey: string | undefined,
-    @Req() req: RequestWithAuth,
+    @Req() req: Request,
   ) {
-    const userId = resolveCurrentUserId(req);
-    if (body && "amount" in body && body.amount !== undefined) {
+    if (body && "amount" in (body as object)) {
       throw new BadRequestException({
         code: "CLIENT_AMOUNT_FORBIDDEN",
         message: "Client must not supply payment amount.",
@@ -100,7 +83,7 @@ export class PaymentController {
     const idempotencyKey = headerKey ?? body?.idempotencyKey;
     const ipAddress = req.ip?.replace(/^::ffff:/, "") ?? "127.0.0.1";
     return this.paymentService.createAttempt({
-      userId,
+      userId: user.id,
       orderId,
       idempotencyKey,
       ipAddress,
@@ -134,26 +117,31 @@ export class PaymentController {
     const verified = this.gateway.verifyReturnUrl(query);
     return {
       ...verified,
-       authoritative: false,
+      authoritative: false,
       message:
         "Return URL chỉ phục vụ điều hướng hiển thị; kết quả cuối cùng phải đọc từ trạng thái đơn/thanh toán trên backend.",
     };
   }
 
   @Get("payments/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
   @Header("Cache-Control", "no-store")
-  getPaymentById(@Param("id") paymentId: string, @Req() req: RequestWithAuth) {
-    const userId = resolveCurrentUserId(req);
-    return this.paymentService.getPaymentById(userId, paymentId);
+  getPaymentById(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) paymentId: string,
+  ) {
+    return this.paymentService.getPaymentById(user.id, paymentId);
   }
 
   @Get("orders/:id/payment-status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
   @Header("Cache-Control", "no-store")
   getOrderPaymentStatus(
-    @Param("id") orderId: string,
-    @Req() req: RequestWithAuth,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) orderId: string,
   ) {
-    const userId = resolveCurrentUserId(req);
-    return this.paymentService.getOrderPaymentStatus(userId, orderId);
+    return this.paymentService.getOrderPaymentStatus(user.id, orderId);
   }
 }

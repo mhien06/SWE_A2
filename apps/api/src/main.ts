@@ -1,8 +1,21 @@
+import "dotenv/config";
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { config as loadEnv } from "dotenv";
+import { resolve } from "node:path";
 import { AppModule } from "./app.module.js";
+
+loadEnv({ path: resolve(process.cwd(), "../../.env"), override: false });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.enableCors({
     origin: process.env.WEB_ORIGIN ?? "http://localhost:3000",
   });
