@@ -64,6 +64,8 @@ Chạy từ thư mục gốc repository (cần Node.js 24 và `pnpm@11.25.0` n�
 | **Chạy kiểm thử (Test)** | `pnpm test` | `pnpm --filter web test` | `pnpm --filter api test` (`test:e2e` cho E2E) |
 | **Biên dịch (Build)** | `pnpm build` | `pnpm --filter web build` | `pnpm --filter api build` |
 
+Workflow CI chạy cùng các lệnh root ở trên cho cả workspace Web và API. Xem [CI: quality gate, cấu hình và evidence](docs/ci.md).
+
 - **Vị trí Prisma schema, migration và seed (`ADR-003`):** đặt tại `apps/api/prisma/` (`schema.prisma`, thư mục `migrations/` và script seed sẽ được bổ sung ở Task 4.3 / Task 5.2) cùng tệp cấu hình `apps/api/prisma7.config.ts`.
 
 ---
