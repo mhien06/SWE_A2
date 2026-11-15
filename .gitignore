@@ -13,3 +13,4 @@ dist/
 apps/api/generated/
 *.log
 apps/api/src/generated/
+tests/artifacts/

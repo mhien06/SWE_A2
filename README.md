@@ -200,4 +200,6 @@ Backlog của dự án được quản lý trực tiếp trên [GitHub Issues](h
 
 ## 7. Task 4.3 — Menu MVP
 
+Kiểm thử Task 5.2: [hướng dẫn cài đặt/chạy và phân biệt payment giả lập với Sandbox thật](tests/task52/README.md).
+
 API contract, migration/seed, cách chạy, kiểm thử và minh chứng demo được ghi tại [docs/task4.3-menu-mvp.md](docs/task4.3-menu-mvp.md).
