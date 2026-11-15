@@ -1,5 +1,7 @@
 # Kiểm thử tích hợp và E2E (`tests/`)
 
+Task 5.2: [hướng dẫn chạy PostgreSQL, health và browser E2E](task52/README.md), [báo cáo chạy local](task52/report.md).
+
 Thư mục này chứa các bài kiểm thử tích hợp liên ứng dụng và kiểm thử đầu-cuối (End-to-End) cho hệ thống **BrewLite** theo cấu trúc repository tại mục 9 của đề bài và `ADR-001`:
 
 - **Unit test / Component test từng ứng dụng:** đặt trực tiếp trong `apps/api/` (`src/**/*.spec.ts`, `test/`) và `apps/web/`.

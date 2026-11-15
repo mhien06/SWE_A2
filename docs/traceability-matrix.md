@@ -58,6 +58,14 @@
 
 ## Quy tắc cập nhật và diễn giải
 
+### Bổ sung kiểm thử Task 5.2
+
+- JWT/quyền/sở hữu, giá server, rollback và idempotency: `tests/task52/postgres.test.ts` (PostgreSQL thật).
+- IPN sai/lặp/đồng thời, FAILED, UNKNOWN/QueryDR, quá hạn, CANCELLED nhận thành công muộn, PAYMENT_EXCEPTION, hoàn kho/điểm lặp: `tests/task52/postgres.test.ts`; nhà cung cấp thanh toán giả lập.
+- Health/readiness (NFR vận hành, ADR-010): `tests/task52/health.test.ts` và kiểm tra DB thật trong `postgres.test.ts`.
+- Luồng menu/tùy chọn/đăng nhập/giỏ/đơn/xác nhận: `tests/task52/browser.test.ts`, Chromium + Web/API/PostgreSQL thật; chỉ điều hướng cổng thanh toán được giả lập.
+- Migration/seed lặp: `apps/api/test/task52-prepare.mjs`. Kết quả và giới hạn nghiệm thu: [báo cáo Task 5.2](../tests/task52/report.md). Không dùng những test này thay minh chứng VNPay Sandbox thật hoặc kết quả CI remote.
+
 - Các cột Use Case, thiết kế, mã nguồn và test trỏ đến artifact/code/test ID thực tế khi đã có bằng chứng; phần payment chưa tích hợp vẫn để Pending.
 - Use Case tổng quát UC-01–UC-20 nằm trong SRS; [đặc tả Checkout](requirements/use-case-checkout.md) đào sâu UC-06/08/09/10 và các luồng M/A/E. Sơ đồ nguồn và bản export được liệt kê trong README.
 - Các nhánh quan trọng cần giữ trong truy vết: thanh toán VNPay thành công/thất bại/lặp/UNKNOWN/hết hạn; Customer/Staff hủy; giao dịch đến muộn; thiếu nguyên liệu; ownership và quyền vai trò.

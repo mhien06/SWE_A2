@@ -27,7 +27,9 @@
     "db:generate": "prisma generate --config prisma7.config.ts",
     "db:migrate": "prisma migrate dev --config prisma7.config.ts",
     "db:seed": "prisma db seed --config prisma7.config.ts",
-    "test:inventory": "vitest run --config vitest.config.inventory.ts"
+    "test:inventory": "vitest run --config vitest.config.inventory.ts",
+    "test:task52": "vitest run --config vitest.config.task52.ts",
+    "test:task52:prepare": "node test/task52-prepare.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -49,6 +51,7 @@
     "@nestjs/mau": "^0.2.6",
     "@nestjs/schematics": "^12.0.0",
     "@nestjs/testing": "^12.0.1",
+    "@playwright/test": "^1.65.1",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.23.1",

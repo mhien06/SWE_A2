@@ -68,7 +68,7 @@ function buildSignedIpnQuery(
   return `${encoded}&vnp_SecureHash=${hash}`;
 }
 
-describe("Payment & VNPay Sandbox Integration Tests (15 scenarios)", () => {
+describe("Payment HTTP integration (in-memory repository; simulated VNPay, not live Sandbox)", () => {
   const originalEnv = { ...process.env };
   let app: INestApplication;
   let repository: InMemoryPaymentRepository;
