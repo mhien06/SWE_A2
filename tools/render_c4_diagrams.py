@@ -11,16 +11,16 @@ from xml.sax.saxutils import escape
 os.makedirs('docs/diagrams/exports', exist_ok=True)
 os.makedirs('docs/diagrams/sources', exist_ok=True)
 
-STY = {  # kind: (fill, stroke, textcolor)
- 'person':('#08427B','#073B6F','#ffffff'),
- 'system':('#1168BD','#0B4884','#ffffff'),
- 'container':('#438DD5','#3C7FC0','#ffffff'),
- 'db':('#438DD5','#3C7FC0','#ffffff'),
- 'external':('#8A8A8A','#6B6B6B','#ffffff'),
- 'component':('#BBD9F5','#5B9BD5','#10243a'),
- 'bar':('#ECECEC','#9A9A9A','#222222'),
- 'boundary':('none','#444444','#222222'),
- 'future':('#FFFFFF','#888888','#555555'),
+STY = {
+ 'person':('#ffffff','#000000','#000000'),
+ 'system':('#ffffff','#000000','#000000'),
+ 'container':('#ffffff','#000000','#000000'),
+ 'db':('#ffffff','#000000','#000000'),
+ 'external':('#ffffff','#000000','#000000'),
+ 'component':('#ffffff','#000000','#000000'),
+ 'bar':('#ffffff','#000000','#000000'),
+ 'boundary':('none','#000000','#000000'),
+ 'future':('#ffffff','#000000','#000000'),
 }
 
 def clip(n, p):
@@ -56,7 +56,7 @@ def build(name, W, H, nodes, edges, title):
     # ---------- SVG ----------
     o = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d" font-family="Arial, Helvetica, sans-serif">' % (W,H,W,H),
          '<title>%s</title>' % escape(title),
-         '<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker></defs>',
+         '<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#000000"/></marker></defs>',
          '<rect width="%d" height="%d" fill="#ffffff"/>' % (W,H)]
     for n in nodes:
         f, s, t = STY[n['kind']]
@@ -79,7 +79,7 @@ def build(name, W, H, nodes, edges, title):
             o.append('<text x="%g" y="%g" text-anchor="middle" font-size="%d" %s fill="%s">%s</text>' % (x+w/2, y0+i*lh, 13 if i==0 else 11, 'font-weight="bold"' if i==0 else '', t, escape(l)))
     for e in edges:
         pts = route(N, e)
-        o.append('<polyline points="%s" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>' % ' '.join('%.1f,%.1f'%p for p in pts))
+        o.append('<polyline points="%s" fill="none" stroke="#000000" stroke-width="1.5" marker-end="url(#ar)"/>' % ' '.join('%.1f,%.1f'%p for p in pts))
         # label at half length
         segs=[(math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]),i) for i in range(len(pts)-1)]
         tot=sum(s for s,_ in segs); acc=0
@@ -90,8 +90,8 @@ def build(name, W, H, nodes, edges, title):
         lab = e['label'].split('|')
         for k,l in enumerate(lab):
             yy = ly + (k-(len(lab)-1)/2)*13 + 4
-            o.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="11" fill="#fff" stroke="#fff" stroke-width="5" stroke-linejoin="round">%s</text>' % (lx,yy,escape(l)))
-            o.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="11" fill="#222">%s</text>' % (lx,yy,escape(l)))
+            o.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">%s</text>' % (lx,yy,escape(l)))
+            o.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="11" fill="#000000">%s</text>' % (lx,yy,escape(l)))
     o.append('</svg>')
     open('docs/diagrams/exports/%s.svg'%name,'w',encoding='utf-8').write('\n'.join(o))
     # ---------- draw.io ----------
@@ -113,7 +113,7 @@ def build(name, W, H, nodes, edges, title):
         pts = route(N,e)[1:-1]
         lab = escape('<br>'.join(e['label'].split('|')))
         g = '<mxGeometry relative="1" as="geometry">' + ('<Array as="points">'+''.join('<mxPoint x="%.0f" y="%.0f"/>'%p for p in pts)+'</Array>' if pts else '') + '</mxGeometry>'
-        d.append('        <mxCell id="e%d" value="%s" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#444444;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="%s" target="%s">%s</mxCell>'%(i+1,lab,e['s'],e['t'],g))
+        d.append('        <mxCell id="e%d" value="%s" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="%s" target="%s">%s</mxCell>'%(i+1,lab,e['s'],e['t'],g))
     d += ['      </root>','    </mxGraphModel>','  </diagram>','</mxfile>']
     open('docs/diagrams/sources/%s.drawio'%name,'w',encoding='utf-8').write('\n'.join(d)+'\n')
 
@@ -171,12 +171,12 @@ nodes=[
  nd('prod','component',265,225,170,80,'ProductModule','Product, ProductOption,','Recipe, RecipeIngredient'),
  nd('cart','component',490,225,170,80,'CartModule','Cart/CartItem, giá tạm tính,','báo giá server'),
  nd('promo','future',715,225,170,80,'PromotionModule «future»','chưa thuộc MVP','(không có FR trong SRS)'),
- nd('order','component',250,380,250,90,'OrderModule','Order/OrderItem, state machine,','OrderCancellation; điều phối TX1/TX3'),
+ nd('order','component',250,380,250,90,'OrderModule','Order/OrderItem, state machine,','OrderCancellation; tạo và hủy đơn'),
  nd('pay','component',650,380,230,90,'PaymentModule','VNPayGateway, Payment attempt,','IPN, VNPayRefundRecord, QueryDR'),
  nd('inv','component',40,550,220,80,'InventoryModule','Ingredient.quantityOnHand,','OrderIngredientUsage (trừ/hoàn)'),
  nd('loy','component',290,550,220,80,'LoyaltyModule','LoyaltyTransaction (ledger),','pointsBalance, bù điểm VNPay'),
  nd('sched','component',650,550,230,80,'SchedulerModule','tự hủy đơn chưa trả hết hạn,','QueryDR attempt PENDING/UNKNOWN'),
- nd('dal','bar',40,675,820,55,'Persistence','PrismaService (Prisma Client) · prisma migrate · seed','Transaction + SELECT … FOR UPDATE (TX1 / TX2 / TX3)'),
+ nd('dal','bar',40,675,820,55,'Persistence','PrismaService (Prisma Client) · prisma migrate · seed','Giao dịch tạo đơn / thanh toán / hủy; SELECT … FOR UPDATE'),
  nd('db','db',330,785,260,80,'PostgreSQL','[Container: DB]'),
  nd('vnp','external',1000,375,200,100,'VNPay Sandbox','[External System]'),
 ]
@@ -186,11 +186,11 @@ edges=[
  ed('order','prod','giá,|công thức'),
  ed('cart','prod','giá|sản phẩm'),
  ed('prod','inv','đọc Ingredient|(công thức)',via=[(170,340),(150,500)]),
- ed('pay','order','TX2: PAID /|PAYMENT_FAILED /|PAYMENT_EXCEPTION'),
+ ed('pay','order','Thanh toán:|PAID / PAYMENT_FAILED /|PAYMENT_EXCEPTION'),
  ed('sched','order','tự hủy|(chưa PAID)'),
  ed('sched','pay','QueryDR|đối soát'),
- ed('order','inv','trừ / hoàn kho|(TX2 / TX3)'),
- ed('order','loy','REDEEM / EARN / hoàn / bù|(TX1–TX3)'),
+ ed('order','inv','trừ kho khi thanh toán|hoàn kho khi hủy đơn'),
+ ed('order','loy','REDEEM / EARN / hoàn / bù|tạo đơn / thanh toán / hủy đơn'),
  ed('inv','dal',''),
  ed('loy','dal',''),
  ed('dal','db','SQL (TCP 5432)'),

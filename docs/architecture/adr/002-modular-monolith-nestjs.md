@@ -7,7 +7,7 @@
 
 ## Context
 
-- Nghiệp vụ cốt lõi (TX2: ghi `PAID`, trừ nguyên liệu, `EARN`) cần tính nguyên tử và nhất quán mạnh (FR-10, NFR-04).
+- Nghiệp vụ cốt lõi (giao dịch xử lý kết quả thanh toán: ghi `PAID`, trừ nguyên liệu, `EARN`) cần tính nguyên tử và nhất quán mạnh (FR-10, NFR-04).
 - Nhóm nhỏ, thời gian hạn chế; hạ tầng triển khai phải đơn giản.
 - Cần ranh giới rõ để phân công và kiểm thử độc lập (NFR-06).
 
@@ -15,7 +15,7 @@
 
 Backend là **một ứng dụng NestJS** (modular monolith), chia module theo domain: Auth, Product, Cart, Order, Payment, Inventory, Loyalty, Scheduler (+ cross-cutting: config, logger, filter, guard, health). `PromotionModule` là `«future»`, chưa thuộc MVP (SRS không có FR khuyến mãi).
 
-Trong mỗi module: Controller → Service → Persistence. Module chỉ gọi module khác qua Service được export, không truy cập bảng của module khác. `OrderModule` điều phối TX1/TX3; `PaymentModule` điều phối TX2.
+Trong mỗi module: Controller → Service → Persistence. Module chỉ gọi module khác qua Service được export, không truy cập bảng của module khác. `OrderModule` điều phối giao dịch tạo đơn và hủy đơn; `PaymentModule` điều phối giao dịch xử lý kết quả thanh toán.
 
 ## Consequences
 

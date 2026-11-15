@@ -31,11 +31,11 @@ Level 4 (code) không vẽ; ánh xạ sang cấu trúc thư mục ở mục 12. 
 
 | # | Động lực | Căn cứ | Hệ quả thiết kế |
 |---|---|---|---|
-| D1 | Trừ nguyên liệu, `EARN`, ghi `PAID` **đúng một lần**; không có `PAID` nửa chừng | FR-10, BR-02, NFR-04, E10 | TX2: một transaction + khóa dòng + ràng buộc unique (mục 6, ADR-005/006) |
+| D1 | Trừ nguyên liệu, `EARN`, ghi `PAID` **đúng một lần**; không có `PAID` nửa chừng | FR-10, BR-02, NFR-04, E10 | Giao dịch xử lý kết quả thanh toán: một transaction + khóa dòng + ràng buộc unique (mục 6, ADR-005/006) |
 | D2 | Order chờ tối đa **15 phút từ `createdAt`**; Payment attempt không vượt hạn Order; thanh toán lại không gia hạn | FR-07, BR-03 | `Order.expiresAt`, `Payment.expiresAt ≤ Order.expiresAt`, Scheduler (mục 7, ADR-007) |
 | D3 | IPN lặp/đến muộn; `PENDING/UNKNOWN` không được coi là thất bại; Return URL không là bằng chứng | FR-09, FR-11–FR-13, BR-04 | Tách `OrderStatus` và `PaymentStatus`; QueryDR đối soát (mục 5.3, 7, ADR-004/011) |
 | D4 | VNPay Sandbox nằm ngoài BrewLite, chỉ VNPay Sandbox | BR-01, FR-08 | Adapter `VNPayGateway` duy nhất (ADR-004) |
-| D5 | Hủy hợp lệ trước pha: hoàn đúng `quantityDeducted` một lần, điều chỉnh/bù điểm, loại trừ refund VNPay cũ | FR-15–FR-20, BR-05–BR-09 | TX3, `OrderIngredientUsage`, `LoyaltyTransaction`, `VNPayRefundRecord` (mục 6.4, ADR-008) |
+| D5 | Hủy hợp lệ trước pha: hoàn đúng `quantityDeducted` một lần, điều chỉnh/bù điểm, loại trừ refund VNPay cũ | FR-15–FR-20, BR-05–BR-09 | giao dịch hủy đơn hàng, `OrderIngredientUsage`, `LoyaltyTransaction`, `VNPayRefundRecord` (mục 6.4, ADR-008) |
 | D6 | Thanh toán thành công đến muộn (đơn `CANCELLED`) hoặc thiếu nguyên liệu | BR-11, BR-12, E08, E09 | Quy trình ngoại lệ + `PAYMENT_EXCEPTION` (mục 6.2, ADR-006/011) |
 | D7 | Mobile-first/PWA, Docker, CI/CD, health, secret không lộ | NFR-05, NFR-07, NFR-03 | Mục 8, ADR-010 |
 | D8 | Ghi vết và truy vết đến yêu cầu, sơ đồ, API, test | FR-26, NFR-08, NFR-10 | Log có correlation-id, bảng sự kiện, mục 12 |
@@ -78,8 +78,8 @@ Module chỉ gọi module khác qua Service được export; không truy cập b
 | `AuthModule` | `User` (`role`, `status`, `passwordHash`); đăng ký, đăng nhập, JWT, RBAC | FR-04 | – |
 | `ProductModule` | `Product`, `ProductOption` (size/topping), `Recipe`, `RecipeIngredient`; quản lý menu/công thức cho Manager | FR-01, FR-02, FR-21, FR-25 | Inventory (đọc `Ingredient`) |
 | `CartModule` | `Cart`, `CartItem` (lưu phía server, `estimatedUnitPrice` là giá tạm tính); kiểm tra giỏ và **báo giá** do backend tính lại | FR-03, FR-05 | Product |
-| `OrderModule` | `Order`, `OrderItem` (snapshot), `OrderCancellation`; state machine; điều phối **TX1** (tạo đơn) và **TX3** (hủy); màn hình Staff chuyển trạng thái | FR-05–FR-07, FR-15–FR-17, FR-23, FR-24 | Cart, Product, Inventory, Loyalty |
-| `PaymentModule` | `Payment` (attempt), `VNPayRefundRecord`; `VNPayGateway` (ký URL, xác minh chữ ký, QueryDR); endpoint IPN/Return; điều phối **TX2** | FR-08–FR-14, FR-19, FR-20 | Order |
+| `OrderModule` | `Order`, `OrderItem` (snapshot), `OrderCancellation`; state machine; điều phối **giao dịch tạo đơn hàng** và **giao dịch hủy đơn hàng**; màn hình Staff chuyển trạng thái | FR-05–FR-07, FR-15–FR-17, FR-23, FR-24 | Cart, Product, Inventory, Loyalty |
+| `PaymentModule` | `Payment` (attempt), `VNPayRefundRecord`; `VNPayGateway` (ký URL, xác minh chữ ký, QueryDR); endpoint IPN/Return; điều phối **giao dịch xử lý kết quả thanh toán** | FR-08–FR-14, FR-19, FR-20 | Order |
 | `InventoryModule` | `Ingredient` (`quantityOnHand`), `OrderIngredientUsage` (trừ/hoàn đúng lượng đã trừ) | FR-10, FR-17, FR-21 | – |
 | `LoyaltyModule` | `LoyaltyTransaction` (ledger), `User.pointsBalance`; `REDEEM`, `EARN`, `RETURN_REDEEMED`, `REVERSE_EARNED`, `VNPAY_COMPENSATION`, `ADJUST` | FR-10, FR-18, FR-19, FR-22 | – |
 | `SchedulerModule` | Đối soát QueryDR cho Payment `PENDING/UNKNOWN`, đánh dấu `EXPIRED`, tự hủy Order chưa `PAID` hết hạn | FR-13 | Order, Payment |
@@ -92,7 +92,7 @@ Trạng thái đơn **không** chứa kết quả thanh toán; kết quả giao 
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING: TX1 tạo đơn (expiresAt = createdAt + 15 phút)
+    [*] --> PENDING: Tạo đơn hàng (expiresAt = createdAt + 15 phút)
     PENDING --> PAYMENT_FAILED: Payment FAILED đã xác minh
     PENDING --> PAID: Payment SUCCEEDED, đủ nguyên liệu
     PAYMENT_FAILED --> PAID: Payment SUCCEEDED đã xác minh, đủ nguyên liệu
@@ -109,7 +109,7 @@ stateDiagram-v2
 ```
 
 - `PAID` **không** tự hủy sau 15 phút. `PAYMENT_EXCEPTION` (đã được Domain Class chốt) không tự hủy theo `expiresAt`, không sang `PREPARING`, giữ nguyên sau khi bù điểm (Domain Class §5, §11).
-- **Hạn Order chỉ giới hạn việc tạo Payment attempt mới** (FR-07, FR-08); nó **không** chặn việc ghi nhận kết quả thành công đã xác minh. Kết quả `SUCCEEDED` nhận được sau hạn (qua IPN hoặc QueryDR) luôn đi qua TX2 và được xử lý theo **trạng thái Order tại thời điểm đó**: nếu Order còn `PENDING`/`PAYMENT_FAILED` (chưa bị tự hủy) → `PAID` hoặc `PAYMENT_EXCEPTION`; nếu Order đã `CANCELLED` → nhánh thanh toán đến muộn (mục 6.2).
+- **Hạn Order chỉ giới hạn việc tạo Payment attempt mới** (FR-07, FR-08); nó **không** chặn việc ghi nhận kết quả thành công đã xác minh. Kết quả `SUCCEEDED` nhận được sau hạn (qua IPN hoặc QueryDR) luôn đi qua giao dịch xử lý kết quả thanh toán và được xử lý theo **trạng thái Order tại thời điểm đó**: nếu Order còn `PENDING`/`PAYMENT_FAILED` (chưa bị tự hủy) → `PAID` hoặc `PAYMENT_EXCEPTION`; nếu Order đã `CANCELLED` → nhánh thanh toán đến muộn (mục 6.2).
 - Từ `PREPARING` trở đi không hủy được; `CANCELLED` không mở lại (BR-06, BR-11).
 
 | `Payment.status` | Ý nghĩa | Cho tạo Payment mới |
@@ -124,16 +124,16 @@ Mỗi Order có tối đa một Payment `SUCCEEDED`.
 
 ## 6. Thiết kế xử lý nghiệp vụ nhạy cảm
 
-Ba transaction đặt tên đúng như tài liệu Sequence: **TX1** tạo đơn, **TX2** xử lý kết quả thanh toán, **TX3** hủy đơn. Mọi lỗi ghi/commit trong TX thì **rollback toàn bộ** và không trả kết quả thành công.
+Ba giao dịch cơ sở dữ liệu gồm **tạo đơn hàng**, **xử lý kết quả thanh toán** và **hủy đơn hàng**. Mọi lỗi ghi/commit trong giao dịch thì **rollback toàn bộ** và không trả kết quả thành công.
 
-### 6.1. TX1 – Tạo đơn
+### 6.1. Giao dịch tạo đơn hàng
 
 1. Báo giá: backend xác thực JWT/quyền Customer, đọc giá, tùy chọn, công thức, nguyên liệu, số dư điểm và **tính lại toàn bộ giá** (FR-05); kho lúc này chỉ là kiểm tra.
 2. `POST /orders`: `BEGIN` → khóa số dư điểm, đọc lại giá/kho → kiểm tra giá khách đã xác nhận → lưu `Order(PENDING)` + `OrderItem` snapshot, `expiresAt = createdAt + 15 phút` theo đồng hồ server → nếu dùng điểm: ghi `REDEEM` và giảm số dư nguyên tử, không vượt số dư → `COMMIT`. **Không trừ/giữ nguyên liệu** (FR-06, BR-02).
 3. `vnpayPayableAmount = totalAmount − pointsDiscountAmount`, không âm **[Đề xuất – Domain Class §12.1]**; `Payment.amount` phải bằng giá trị này khi xác minh.
-4. Ghi `REDEEM` ngay ở TX1, trả lại đúng một lần khi hủy/ngoại lệ kết thúc **[Đề xuất – Sequence]**.
+4. Ghi `REDEEM` ngay trong giao dịch tạo đơn hàng, trả lại đúng một lần khi hủy/ngoại lệ kết thúc **[Đề xuất – Sequence]**.
 
-### 6.2. TX2 – Xử lý kết quả thanh toán (IPN hoặc QueryDR, dùng chung một hàm)
+### 6.2. Giao dịch xử lý kết quả thanh toán (IPN hoặc QueryDR, dùng chung một hàm)
 
 ```mermaid
 sequenceDiagram
@@ -148,9 +148,9 @@ sequenceDiagram
     alt Không hợp lệ
         P-->>V: Phản hồi lỗi, không đổi Payment/Order
     else Hợp lệ
-        P->>D: BEGIN TX2, khóa Order, Payment, Ingredient, điểm
+        P->>D: BEGIN – giao dịch xử lý kết quả thanh toán, khóa Order, Payment, Ingredient, điểm
         alt Giao dịch đã xử lý (IPN lặp)
-            P->>D: Kết thúc TX2, không đổi gì
+            P->>D: Kết thúc giao dịch xử lý kết quả thanh toán, không đổi gì
         else Payment FAILED đã xác minh
             P->>D: Payment FAILED, Order PAYMENT_FAILED nếu còn chờ
         else SUCCEEDED, Order đã CANCELLED
@@ -202,7 +202,7 @@ Mỗi bước có khóa nghiệp vụ duy nhất (`idempotencyKey`), nên rollba
 | Tạo Payment attempt | Header `Idempotency-Key` lưu ở `Payment.idempotencyKey` (unique) cùng hash nội dung. **Cùng key + cùng nội dung** → trả lại kết quả cũ, không tạo attempt mới; **cùng key khác nội dung** → từ chối (`409`) (FR-12, A05) | Bấm hai lần, gửi lại khi mạng chậm |
 | Điều kiện tạo attempt mới | Order còn hạn **và** mọi attempt trước đã kết thúc rõ (`FAILED`/`EXPIRED`); có attempt `PENDING`/`UNKNOWN` thì không tạo, trả "Đang xác minh" (E06) | Hai lượt thanh toán cạnh tranh |
 | Giao dịch VNPay | `Payment.transactionRef` duy nhất | Trùng mã tham chiếu |
-| IPN / QueryDR lặp | Payment đã xử lý thì chỉ ACK; cùng hàm TX2 cho cả IPN và QueryDR | Xử lý lặp |
+| IPN / QueryDR lặp | Payment đã xử lý thì chỉ ACK; cùng hàm giao dịch xử lý kết quả thanh toán cho cả IPN và QueryDR | Xử lý lặp |
 | Hủy đơn | `OrderCancellation.idempotencyKey`; mỗi Order tối đa một `OrderCancellation` | Hủy lặp |
 | Hoàn kho | `OrderIngredientUsage.restoreIdempotencyKey`, ràng buộc `quantityRestored ≤ quantityDeducted` | Hoàn kho nhiều lần |
 | Điểm | `LoyaltyTransaction.idempotencyKey` unique; unique `(paymentId, VNPAY_COMPENSATION)` | Cộng/hoàn/bù điểm lặp |
@@ -210,14 +210,14 @@ Mỗi bước có khóa nghiệp vụ duy nhất (`idempotencyKey`), nên rollba
 
 Domain model **không** có `idempotencyKey` trên `Order`; nguy cơ tạo trùng đơn khi bấm đúp được giảm bằng bước "xác nhận giá" ở UI và chống submit lặp, và là điểm cần nhóm xem lại (mục 11).
 
-### 6.4. TX3 – Hủy đơn, hoàn nguyên liệu và điểm
+### 6.4. Giao dịch hủy đơn hàng, hoàn nguyên liệu và điểm
 
 `POST /orders/:id/cancel` (JWT, key, lý do). Kiểm quyền: Customer chỉ hủy đơn **của mình** khi `PENDING`/`PAYMENT_FAILED`/`PAID` chưa pha; Staff chỉ hủy `PAID` chưa pha và **bắt buộc có lý do** (FR-15, FR-16). Từ `PREPARING` trở đi: từ chối. Thao tác bắt đầu pha dùng cùng khóa Order nên **chỉ một bên thắng** (FR-24).
 
 | Đơn bị hủy khi | Nguyên liệu | Điểm |
 |---|---|---|
 | `PENDING` / `PAYMENT_FAILED` (đã xác nhận chưa trả tiền) | Không hoàn (`OrderIngredientUsage` rỗng) | `RETURN_REDEEMED` cho `REDEEM` chưa hoàn |
-| Có Payment `PENDING`/`UNKNOWN` | Chưa hủy: lưu yêu cầu chờ đối soát, gọi QueryDR **ngoài transaction giữ khóa**, rồi chạy lại TX3 | – |
+| Có Payment `PENDING`/`UNKNOWN` | Chưa hủy: lưu yêu cầu chờ đối soát, gọi QueryDR **ngoài transaction giữ khóa**, rồi chạy lại giao dịch hủy đơn hàng | – |
 | `PAID` chưa pha | Hoàn đúng `quantityDeducted` đã lưu (**không** tính lại từ Recipe hiện tại), ghi `quantityRestored`, `restoredAt` | `RETURN_REDEEMED` + `REVERSE_EARNED`; **bù** `VNPAY_COMPENSATION = ceil(VNPay thực trả / 100)` nếu qua kiểm tra refund cũ (bảng ở mục 6.2) |
 
 `OrderCancellation` ghi người hủy, vai trò, lý do, `isAutomatic`, `cancelledAt`. Điểm bù là quyền lợi trong BrewLite, **không** phải tiền hoàn về VNPay (BR-08). Cho phép hay chặn `pointsBalance` âm khi thu hồi `EARN` đã tiêu là điểm cần nhóm chốt (mục 11).
@@ -229,7 +229,7 @@ Domain model **không** có `idempotencyKey` trên `Order`; nguy cơ tạo trùn
 **Nhiệm vụ 1 – Đối soát Payment chưa rõ (định kỳ, backoff):**
 
 1. Đọc Payment `PENDING`/`UNKNOWN` (kể cả quá `Payment.expiresAt`).
-2. Gọi **QueryDR ngoài transaction giữ khóa**, xác minh phản hồi (mã, tiền), rồi áp dụng **cùng TX2 và idempotency như IPN**.
+2. Gọi **QueryDR ngoài transaction giữ khóa**, xác minh phản hồi (mã, tiền), rồi áp dụng **cùng giao dịch xử lý kết quả thanh toán và idempotency như IPN**.
 3. Chưa rõ hoặc lỗi tra cứu: giữ `UNKNOWN`, hẹn lại; **không hủy mù**. Quá ngưỡng thử lại thì đánh dấu cần kiểm tra thủ công **[Đề xuất – ngưỡng do nhóm chốt]**.
 4. Đã xác minh không có thành công: attempt quá hạn → `EXPIRED`.
 
@@ -238,7 +238,7 @@ Domain model **không** có `idempotencyKey` trên `Order`; nguy cơ tạo trùn
 1. Chọn Order `PENDING`/`PAYMENT_FAILED` có `expiresAt <= now()` bằng `FOR UPDATE SKIP LOCKED` theo lô (an toàn khi chạy nhiều bản API).
 2. Với Order có Payment chưa rõ: chạy nhiệm vụ 1 **trước**; khi mọi Payment đã rõ, khóa và **kiểm tra lại** Order/Payment.
 3. Chỉ khi **không có `SUCCEEDED` và không còn `PENDING`/`UNKNOWN`**: `CANCELLED` + `OrderCancellation(isAutomatic = true)`, `RETURN_REDEEMED` cho `REDEEM` chưa hoàn, không hoàn kho (E07, TC-1.3-11/12).
-4. Thành công tìm được lúc đối soát (kể cả sau `Order.expiresAt`): xử lý theo TX2 và **trạng thái Order hiện tại** – Order còn `PENDING`/`PAYMENT_FAILED` → `PAID` hoặc `PAYMENT_EXCEPTION` (Order không bị tự hủy vì đã có `SUCCEEDED`); Order đã `CANCELLED` → nhánh đến muộn, không mở lại đơn (mục 6.2).
+4. Thành công tìm được lúc đối soát (kể cả sau `Order.expiresAt`): xử lý theo giao dịch xử lý kết quả thanh toán và **trạng thái Order hiện tại** – Order còn `PENDING`/`PAYMENT_FAILED` → `PAID` hoặc `PAYMENT_EXCEPTION` (Order không bị tự hủy vì đã có `SUCCEEDED`); Order đã `CANCELLED` → nhánh đến muộn, không mở lại đơn (mục 6.2).
 5. **Không** tự hủy `PAID` hay `PAYMENT_EXCEPTION`.
 
 Hạn Order chỉ chặn **tạo Payment mới** sau `Order.expiresAt`; thanh toán lại không gia hạn Order (FR-07, FR-13). Việc ghi nhận kết quả thành công đã xác minh không bị chặn bởi hạn.
@@ -256,7 +256,7 @@ Hạn Order chỉ chặn **tạo Payment mới** sau `Order.expiresAt`; thanh to
 ### 8.2. Logging và ghi vết
 
 - Log **JSON có cấu trúc** (Pino) ra stdout; mỗi request có `correlationId`, tra cứu được theo Order/Payment (NFR-08).
-- Ghi sự kiện: đổi trạng thái đơn, kết quả xác minh IPN/QueryDR, TX2/TX3, hoàn kho, `EARN`/`REDEEM`/bù điểm.
+- Ghi sự kiện: đổi trạng thái đơn, kết quả xác minh IPN/QueryDR, giao dịch xử lý thanh toán và hủy đơn, hoàn kho, `EARN`/`REDEEM`/bù điểm.
 - **Không** log secret, token, `vnp_SecureHash`, mật khẩu hay dữ liệu ngân hàng.
 
 ### 8.3. Health check
@@ -295,7 +295,7 @@ JWT + `RolesGuard`; kiểm tra **sở hữu đơn** ở Service (NFR-02); `Valid
 | [003](adr/003-postgresql-prisma-migrations.md) | PostgreSQL + Prisma Migrate, tiền lưu số nguyên |
 | [004](adr/004-vnpay-sandbox-integration.md) | VNPay Sandbox qua adapter; tin IPN/QueryDR, không tin Return URL |
 | [005](adr/005-idempotency-and-duplicate-control.md) | Idempotency nhiều lớp, khóa trên thực thể |
-| [006](adr/006-transactions-inventory-loyalty.md) | TX1/TX2/TX3: thanh toán, trừ kho, tích điểm, hủy đơn |
+| [006](adr/006-transactions-inventory-loyalty.md) | Tạo đơn, xử lý thanh toán, trừ kho, tích điểm và hủy đơn |
 | [007](adr/007-scheduler-expiry-reconciliation.md) | Scheduler: hết hạn 15 phút và đối soát QueryDR |
 | [008](adr/008-loyalty-ledger-compensation.md) | Sổ cái điểm, hoàn và bù điểm, loại trừ refund VNPay cũ |
 | [009](adr/009-jwt-authentication-rbac.md) | JWT và RBAC Customer/Staff/Manager |
@@ -304,11 +304,11 @@ JWT + `RolesGuard`; kiểm tra **sở hữu đơn** ở Service (NFR-02); `Valid
 
 ## 11. Điểm cần nhóm xác nhận khi review
 
-Chỉ gồm các điểm **thực sự chưa được chốt** (SRS §8, Domain Class §12, Sequence) và các đề xuất riêng của tài liệu này. `PAYMENT_EXCEPTION`, TX1–TX3, thanh toán đến muộn và bù điểm đã được Task 1–2 chốt nên **không** nằm trong danh sách này.
+Chỉ gồm các điểm **thực sự chưa được chốt** (SRS §8, Domain Class §12, Sequence) và các đề xuất riêng của tài liệu này. `PAYMENT_EXCEPTION`, giao dịch tạo đơn và hủy đơn, thanh toán đến muộn và bù điểm đã được Task 1–2 chốt nên **không** nằm trong danh sách này.
 
 1. **Tỷ lệ tích điểm `EARN`** và quy tắc làm tròn (SRS §8, chưa chốt).
 2. **Thời hạn mỗi Payment attempt** (≤ hạn Order; nếu dùng 5 phút/lượt cần chốt) – biến `PAYMENT_ATTEMPT_TTL_MINUTES`.
-3. **Thời điểm ghi `REDEEM`** ở TX1 và `vnpayPayableAmount = totalAmount − pointsDiscountAmount` (Sequence, Domain Class §12.1).
+3. **Thời điểm ghi `REDEEM`** trong giao dịch tạo đơn hàng và `vnpayPayableAmount = totalAmount − pointsDiscountAmount` (Sequence, Domain Class §12.1).
 4. **Refund VNPay cũ ở trạng thái `FAILED`** có cho bù điểm không (Domain Class §12.4).
 5. **`pointsBalance` không âm** (Domain Class §12.2) so với việc thu hồi `EARN` đã tiêu.
 6. **Order `PAYMENT_FAILED` khi tạo Payment mới**: kiến trúc giữ `PAYMENT_FAILED` cho đến khi có kết quả; Domain Class chưa quy định có quay lại `PENDING`.
@@ -325,8 +325,8 @@ Truy vết đầy đủ (FR → UC → sơ đồ → API → test) sẽ vào `do
 | `AuthModule` | FR-04; NFR-02 | UC-01, UC-02; PRE-01, E01 | `apps/api/src/auth/` |
 | `ProductModule` | FR-01, FR-02, FR-21, FR-25 | UC-03, UC-04, UC-18–UC-20 | `apps/api/src/product/` |
 | `CartModule` | FR-03, FR-05 | UC-05; M01–M03, E02 | `apps/api/src/cart/` |
-| `OrderModule` (TX1, TX3) | FR-05–FR-07, FR-15–FR-17, FR-23, FR-24; BR-02, BR-03, BR-05, BR-06 | UC-06, UC-11–UC-17; `sequence-create-order`, `sequence-cancel-order` | `apps/api/src/order/` |
-| `PaymentModule` (TX2) | FR-08–FR-14, FR-19, FR-20; BR-01, BR-04, BR-09, BR-11, BR-12; NFR-03, NFR-04 | UC-09, UC-10; `sequence-payment-vnpay`; A03–A07, E04–E09 | `apps/api/src/payment/` |
+| `OrderModule` (tạo đơn và hủy đơn) | FR-05–FR-07, FR-15–FR-17, FR-23, FR-24; BR-02, BR-03, BR-05, BR-06 | UC-06, UC-11–UC-17; `sequence-create-order`, `sequence-cancel-order` | `apps/api/src/order/` |
+| `PaymentModule` (xử lý thanh toán) | FR-08–FR-14, FR-19, FR-20; BR-01, BR-04, BR-09, BR-11, BR-12; NFR-03, NFR-04 | UC-09, UC-10; `sequence-payment-vnpay`; A03–A07, E04–E09 | `apps/api/src/payment/` |
 | `InventoryModule` | FR-10, FR-17, FR-21; BR-02, BR-07 | M09, E09; `OrderIngredientUsage` | `apps/api/src/inventory/` |
 | `LoyaltyModule` | FR-10, FR-18, FR-19, FR-22; BR-07, BR-08, BR-10–BR-12 | UC-07, UC-08; A02, E03 | `apps/api/src/loyalty/` |
 | `SchedulerModule` | FR-13; BR-03, BR-04 | E06, E07; TC-1.3-11, TC-1.3-12 | `apps/api/src/scheduler/` |
@@ -340,4 +340,4 @@ Truy vết đầy đủ (FR → UC → sơ đồ → API → test) sẽ vào `do
 
 - **Task 2:** Sequence và Domain Class là căn cứ; nếu có khác biệt, SRS là căn cứ cuối (như tài liệu Sequence quy định). Tài liệu này không đổi tên trạng thái, thực thể hay loại giao dịch điểm.
 - **Task 3.2:** Deployment diagram tham chiếu các container ở mục 4.2 và quy tắc cấu hình ở mục 8.4.
-- **Task 4–5:** cấu trúc ở mục 12 và các transaction TX1–TX3 là cơ sở cho integration test (NFR-09).
+- **Task 4–5:** cấu trúc ở mục 12 và các transaction giao dịch tạo đơn và hủy đơn là cơ sở cho integration test (NFR-09).
