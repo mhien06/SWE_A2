@@ -12,3 +12,4 @@ dist/
 **/coverage/
 apps/api/generated/
 *.log
+apps/api/src/generated/

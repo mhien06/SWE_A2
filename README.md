@@ -91,7 +91,7 @@ Schema hiện chưa có model; không tự chạy migration, `db push` hoặc t�
 
 PostgreSQL 17 lưu dữ liệu trong named volume `swe-a2-dev_postgres_data`, độc lập với container PostgreSQL đã có trên máy. `docker compose stop` hoặc `docker compose down` không xóa volume. **Không dùng `docker compose down -v` hoặc xóa volume.** Đổi user/password/database trong `.env` không cập nhật database đã khởi tạo; giữ thông tin cũ hoặc quản trị database riêng, không xóa dữ liệu để sửa lỗi.
 
-Xem log bằng `docker compose logs --tail=100 api web postgres`. Đây là môi trường phát triển local, không bao gồm production deploy, CI/CD hay nghiệp vụ menu/checkout/thanh toán.
+Xem log bằng `docker compose logs --tail=100 api web postgres`. Đây là môi trường phát triển local, không bao gồm production deploy, CI/CD, checkout hoặc thanh toán. Hướng dẫn Menu MVP nằm tại `docs/task4.3-menu-mvp.md`.
 
 Nếu đang chạy Web/API/PostgreSQL trực tiếp trên các cổng mặc định, có thể thử Compose mà không dừng chúng bằng PowerShell:
 
@@ -190,3 +190,7 @@ Backlog của dự án được quản lý trực tiếp trên [GitHub Issues](h
 | [#23](https://github.com/mhien06/SWE_A2/issues/23) | **[Task 5.2]** Tích hợp, kiểm thử (unit/integration/E2E), Docker Compose và `/health` | Trần Kim Xuyến (`@computerbotver2`) | #20, #21, #22 |
 | [#24](https://github.com/mhien06/SWE_A2/issues/24) | **[Task 5.3]** Continuous Delivery – Docker image, GHCR và pipeline triển khai | Phạm Minh Thiện (`@tp9951819-cell`) | #19, #23 |
 | [#25](https://github.com/mhien06/SWE_A2/issues/25) | **[Task 5.3 + 5.4]** Deploy production HTTPS, smoke test, rollback, release notes, demo & Sprint Review/Retro | Nguyễn Minh Hiển (`@mhien06`) + Phạm Minh Thiện (`@tp9951819-cell`) | #23, #24 |
+
+## 7. Task 4.3 — Menu MVP
+
+API contract, migration/seed, cách chạy, kiểm thử và minh chứng demo được ghi tại [docs/task4.3-menu-mvp.md](docs/task4.3-menu-mvp.md).
