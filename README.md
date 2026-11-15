@@ -1,14 +1,26 @@
 # SWE_A2
 
-## Tài liệu BrewLite
+## Tài liệu BrewLite và trạng thái bàn giao
 
+### Yêu cầu
 - [Task 1.1 – Bối cảnh và phạm vi](docs/requirements/context-and-scope.md)
 - [Task 1.2 – SRS](docs/requirements/srs.md)
 - [Task 1.3 – Đặc tả Use Case Checkout](docs/requirements/use-case-checkout.md)
-- [Task 2.2 – Sequence Diagram Checkout](docs/diagrams/sequence-checkout.md)
-- [Task 3.1 – Kiến trúc hệ thống và ADR](docs/architecture/architecture.md)
+- [Ma trận truy vết FR/NFR/BR](docs/traceability-matrix.md)
 
-Repo gồm tài liệu và scaffold Next.js (`apps/web`), NestJS (`apps/api`), Prisma 7. Chưa triển khai nghiệp vụ.
+### Sơ đồ Task 2–3
+- [Domain Class](docs/diagrams/domain-class.md)
+- [Sequence Checkout](docs/diagrams/sequence-checkout.md)
+- Nguồn có thể chỉnh sửa: [docs/diagrams/sources/](docs/diagrams/sources/)
+- Bản xuất: [docs/diagrams/exports/](docs/diagrams/exports/)
+- [Kiến trúc hệ thống và ADR](docs/architecture/architecture.md)
+- [Deployment design – Task 3.2](docs/architecture/deployment.md)
+
+### Chạy, bàn giao và tiến độ
+- [Hướng dẫn chạy/deploy và tình trạng môi trường](docs/deployment.md)
+- [Checklist nộp bài và minh chứng](docs/submission-checklist.md)
+
+Tài liệu và sơ đồ Task 1–3 hiện có trên nhánh tích hợp. Repository hiện vẫn là scaffold Next.js (`apps/web`), NestJS (`apps/api`) và Prisma; README này không khẳng định nghiệp vụ, test nghiệp vụ, CI/CD hay production đã hoàn thành. Ma trận và checklist giữ các phần chưa có bằng chứng ở trạng thái Pending.
 
 ## Môi trường phát triển Docker
 
