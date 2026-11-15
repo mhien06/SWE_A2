@@ -40,15 +40,15 @@ Cấu hình mục tiêu cho `develop`:
 4. Không dùng path filtering cho workflow required này.
 5. Xác minh bằng một lượt PR CI xanh và một PR có lỗi test bị check đỏ; sửa PR lỗi rồi xác minh lại màu xanh.
 
-**Trạng thái cấu hình repository:** Pending owner/admin action với @mhien06. Tài khoản/connector hiện tại chưa xác nhận quyền quản trị để bật hoặc sửa branch protection. Sau khi được cấu hình, thêm link/ảnh chụp tại mục evidence bên dưới.
+**Trạng thái cấu hình repository:** Pending owner/admin action với @mhien06. Rulesets API hiện không trả ruleset cho repo và GitHub integration từ chối quyền đọc branch protection (403); chưa có bằng chứng quy tắc required check đã bật. Sau khi owner/admin cấu hình, thêm link/ảnh chụp tại mục evidence bên dưới.
 
 ## Evidence
 
 | Kết quả | Trạng thái | Link |
 |---|---|---|
-| PR CI xanh: install, lint, unit tests và build | Pending | Bổ sung GitHub Actions run sau khi workflow chạy trên PR |
-| Lượt phát hiện lỗi test có chủ ý | Pending | Bổ sung failed Actions run; phục hồi test và kiểm tra lại xanh trước merge |
-| Required check `CI` chặn merge trên `develop` | Pending | Ảnh/link branch protection do repo owner/admin xác nhận |
+| PR CI xanh: install, lint, unit tests và build | Passed | [Run #4](https://github.com/mhien06/SWE_A2/actions/runs/43696398316) · [ci-logs artifact](https://github.com/mhien06/SWE_A2/actions/runs/43696398316/artifacts/14155285106) |
+| Lượt phát hiện lỗi test có chủ ý | Detected: Unit test failed; Build was skipped; test restored | [Run #3](https://github.com/mhien06/SWE_A2/actions/runs/43696286636) · [ci-logs artifact](https://github.com/mhien06/SWE_A2/actions/runs/43696286636/artifacts) |
+| Required check `CI` chặn merge trên `develop` | Pending owner/admin | Cần cấu hình và ảnh/link branch protection từ repo owner/admin; API integration chưa có quyền quản trị |
 | Test tích hợp/E2E nghiệp vụ đầy đủ | Pending | @computerbotver2, [Issue #23](https://github.com/mhien06/SWE_A2/issues/23); module owners theo [traceability matrix](traceability-matrix.md) |
 
 ## Phạm vi hiện tại
