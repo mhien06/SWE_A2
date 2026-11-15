@@ -15,7 +15,7 @@
 ## Decision
 
 1. `SchedulerModule` (`@nestjs/schedule`) trong API, hai nhiệm vụ: **đối soát Payment chưa rõ** và **tự hủy Order chưa thanh toán hết hạn** (mỗi phút).
-2. `Order.expiresAt = createdAt + ORDER_PENDING_TTL_MINUTES` (mặc định 15) theo đồng hồ server; `Payment.expiresAt` cấu hình bằng `PAYMENT_ATTEMPT_TTL_MINUTES`, không vượt hạn Order.
+2. `Order.expiresAt = createdAt + 15 phút` theo đồng hồ server (Task 5.1 contract); `Payment.expiresAt` cấu hình bằng `PAYMENT_ATTEMPT_TTL_MINUTES`, không vượt hạn Order.
 3. Đối soát: đọc Payment `PENDING`/`UNKNOWN`, gọi **QueryDR ngoài transaction giữ khóa**, xác minh rồi áp dụng **cùng giao dịch xử lý kết quả thanh toán** như IPN; chưa rõ thì giữ `UNKNOWN`, hẹn lại với backoff; attempt quá hạn đã xác minh không thành công → `EXPIRED`.
 4. Hạn Order chỉ giới hạn **tạo Payment attempt mới**, không chặn ghi nhận kết quả thành công đã xác minh: kết quả `SUCCEEDED` nhận sau hạn đi qua giao dịch xử lý kết quả thanh toán và xử lý theo trạng thái Order hiện tại (còn `PENDING`/`PAYMENT_FAILED` → `PAID` hoặc `PAYMENT_EXCEPTION`; đã `CANCELLED` → nhánh đến muộn).
 5. Tự hủy: chọn Order `PENDING`/`PAYMENT_FAILED` quá hạn bằng `FOR UPDATE SKIP LOCKED` theo lô; đối soát trước; khóa và kiểm tra lại; **chỉ hủy khi không có `SUCCEEDED` và không còn `PENDING`/`UNKNOWN`**: `CANCELLED` + `OrderCancellation(isAutomatic = true)`, `RETURN_REDEEMED`, không hoàn kho.

@@ -25,6 +25,20 @@ services:
       NODE_ENV: development
       PORT: "3001"
       DATABASE_URL: postgresql://${POSTGRES_USER:-brewlite}:${POSTGRES_PASSWORD:-brewlite_local}@postgres:5432/${POSTGRES_DB:-brewlite_dev}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-replace-with-local-dev-jwt-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PAYMENT_ATTEMPT_TTL_MINUTES: ${PAYMENT_ATTEMPT_TTL_MINUTES:-15}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      VNP_TMN_CODE: ${VNP_TMN_CODE:-}
+      VNP_HASH_SECRET: ${VNP_HASH_SECRET:-}
+      VNP_PAY_URL: ${VNP_PAY_URL:-}
+      VNP_API_URL: ${VNP_API_URL:-}
+      VNP_RETURN_URL: ${VNP_RETURN_URL:-}
+      LOYALTY_EARN_POINTS_PER_VND: ${LOYALTY_EARN_POINTS_PER_VND:-}
+      LOYALTY_EARN_ROUNDING: ${LOYALTY_EARN_ROUNDING:-}
+      LOYALTY_REDEEM_VND_PER_POINT: ${LOYALTY_REDEEM_VND_PER_POINT:-}
+      SEED_MANAGER_EMAIL: ${SEED_MANAGER_EMAIL:-}
+      SEED_MANAGER_PASSWORD: ${SEED_MANAGER_PASSWORD:-}
       TSC_WATCHFILE: DynamicPriorityPolling
       TSC_WATCHDIRECTORY: RecursiveDirectoryUsingDynamicPriorityPolling
     ports:

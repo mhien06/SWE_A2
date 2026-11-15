@@ -265,7 +265,7 @@ Hạn Order chỉ chặn **tạo Payment mới** sau `Order.expiresAt`; thanh to
 
 ### 8.4. Quản lý cấu hình và secret
 
-- Cấu hình qua **biến môi trường**, `ConfigModule` **validate lúc khởi động** (thiếu/sai thì dừng). `.env.example` chỉ chứa tên biến: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `VNP_TMN_CODE`, `VNP_HASH_SECRET`, `VNP_PAY_URL`, `VNP_API_URL`, `VNP_RETURN_URL`, `ORDER_PENDING_TTL_MINUTES` (mặc định 15), `PAYMENT_ATTEMPT_TTL_MINUTES` (không vượt hạn Order), `WEB_ORIGIN`.
+- Cấu hình qua **biến môi trường**, `ConfigModule` **validate lúc khởi động** (thiếu/sai thì dừng). `.env.example` chỉ chứa tên biến: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `VNP_TMN_CODE`, `VNP_HASH_SECRET`, `VNP_PAY_URL`, `VNP_API_URL`, `VNP_RETURN_URL`, `PAYMENT_ATTEMPT_TTL_MINUTES` (không vượt hạn Order), `WEB_ORIGIN`. Order TTL là 15 phút theo Task 5.1 contract.
 - Secret thật chỉ ở máy local, secret store của CI và nền tảng production; không commit, không in ra log CI.
 - CORS chỉ cho `WEB_ORIGIN`; HTTPS bắt buộc ở production (Task 3.2).
 

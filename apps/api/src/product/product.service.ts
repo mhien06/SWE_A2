@@ -48,4 +48,38 @@ export class ProductService {
       })),
     };
   }
+
+  async setAvailability(
+    id: string,
+    actorUserId: string,
+    isAvailable: boolean,
+    reason: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id" = ${id}::uuid FOR UPDATE`;
+      const product = await tx.product.findUnique({ where: { id } });
+      if (!product) {
+        throw new NotFoundException("Product not found");
+      }
+      if (product.isAvailable !== isAvailable) {
+        await tx.product.update({
+          where: { id },
+          data: { isAvailable },
+        });
+        await tx.productAvailabilityChange.create({
+          data: {
+            productId: id,
+            actorUserId,
+            isAvailable,
+            reason: reason.trim(),
+          },
+        });
+      }
+      return {
+        id: product.id,
+        name: product.name,
+        isAvailable,
+      };
+    });
+  }
 }
