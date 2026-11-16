@@ -95,7 +95,7 @@ jobs:
 
       - name: Verify public endpoints
         env:
-          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL }}
+          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL || 'https://swe-a2.vercel.app' }}
           API_PRODUCTION_URL: ${{ vars.API_PRODUCTION_URL || 'https://brewlite-a2-api-0jkv.onrender.com' }}
         run: node tools/smoke-production.mjs --attempts 36 --delay-ms 10000
 
