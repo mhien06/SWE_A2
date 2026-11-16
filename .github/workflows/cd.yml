@@ -14,50 +14,27 @@ permissions:
 
 jobs:
   deploy-web:
-    name: Deploy Web to Vercel
+    name: Trigger Vercel deployment via Deploy Hook
     runs-on: ubuntu-latest
     environment: production
     outputs:
       deployment_url: ${{ steps.deploy.outputs.url }}
     steps:
-      - name: Checkout CI-approved commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.commit_sha }}
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.25.0
-          run_install: false
-
-      - name: Link existing Vercel project
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          EXPECTED_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          test -n "$EXPECTED_PROJECT_ID"
-          pnpm dlx vercel@65.16.0 link --yes --project swe-a2 --scope acquyff --token "$VERCEL_TOKEN"
-          test "$(jq -r '.projectId' .vercel/project.json)" = "$EXPECTED_PROJECT_ID"
-
-      - name: Pull Vercel project configuration
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: pnpm dlx vercel@65.16.0 pull --yes --environment=production --scope acquyff --token "$VERCEL_TOKEN"
-
-      - name: Deploy production
+      - name: Trigger Git-linked Vercel deployment after successful CI
         id: deploy
         shell: bash
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL }}
         run: |
-          url=$(pnpm dlx vercel@65.16.0 deploy --prod --yes \
-            --scope acquyff \
-            --token "$VERCEL_TOKEN" \
-            --meta gitCommitSha="${{ inputs.commit_sha }}" | tail -n 1)
-          test -n "$url"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Vercel deployment: $url"
+          set -euo pipefail
+          : "${VERCEL_DEPLOY_HOOK:?Add VERCEL_DEPLOY_HOOK to GitHub Environment production}"
+          : "${WEB_PRODUCTION_URL:?Add WEB_PRODUCTION_URL to GitHub Environment production}"
+          response=$(curl --fail-with-body --silent --show-error --retry 3 --max-time 30 \
+            --request POST "$VERCEL_DEPLOY_HOOK")
+          jq -e '.job.id and .job.state' <<< "$response" >/dev/null
+          echo "url=$WEB_PRODUCTION_URL" >> "$GITHUB_OUTPUT"
+          echo "Vercel Deploy Hook accepted deployment request; verify completion in Vercel dashboard."
 
   deploy-api:
     name: Deploy API to Render
