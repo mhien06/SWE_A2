@@ -29,24 +29,44 @@ Render Free không hỗ trợ `preDeployCommand`. Vì vậy image chạy `prisma
 
 Không đặt `JWT_SECRET`, `VNP_HASH_SECRET` hoặc `DATABASE_URL` ở Vercel.
 
-## 3. Tạo Render API và PostgreSQL
 
-Tạo Blueprint từ `render.yaml`, nhập các giá trị `sync: false`:
+## 3. Triển khai thực tế trên Render
 
-| Biến | Giá trị |
+BrewLite A2 được triển khai thủ công trên Render, sử dụng Docker cho Backend NestJS và PostgreSQL làm cơ sở dữ liệu.
+
+| Thành phần | Cấu hình thực tế |
 |---|---|
-| `WEB_ORIGIN` | URL production Vercel, không có dấu `/` cuối |
-| `VNP_TMN_CODE` | Mã merchant VNPay Sandbox |
-| `VNP_HASH_SECRET` | Secret VNPay Sandbox |
-| `VNP_RETURN_URL` | `https://<vercel-domain>/checkout/return` |
+| Web Service | `brewlite-a2-api` |
+| Runtime | Docker |
+| Dockerfile | `apps/api/Dockerfile` |
+| Region | Singapore |
+| Database | `brewlite-a2-db` |
+| PostgreSQL | Version 17 |
+| Auto-Deploy | Off |
+| Nhánh triển khai ban đầu | `ci/task5-cloud-delivery` |
 
-Blueprint tự nối `DATABASE_URL` bằng private connection string và tạo `JWT_SECRET`. Giữ `Auto-Deploy = Off`; CD gọi Render API với đúng commit SHA đã qua CI.
+Backend sử dụng Internal Database URL để kết nối PostgreSQL. Prisma migration được thực thi khi khởi động container. Dữ liệu mẫu được bổ sung riêng sau khi tạo database.
 
-VNPay IPN public URL:
+Frontend được triển khai bằng Next.js trên Vercel, sử dụng biến `NEXT_PUBLIC_API_URL` để gọi Backend qua HTTPS.
 
-```text
-https://<render-service>.onrender.com/payments/vnpay/ipn
-```
+### Địa chỉ triển khai
+
+- Frontend: https://swe-a2.vercel.app
+- Backend: https://brewlite-a2-api-0jkv.onrender.com
+- Health: https://brewlite-a2-api-0jkv.onrender.com/health
+- Readiness: https://brewlite-a2-api-0jkv.onrender.com/health/ready
+
+### VNPay Sandbox
+
+- Return URL: https://swe-a2.vercel.app/checkout/return
+- IPN URL: https://brewlite-a2-api-0jkv.onrender.com/payments/vnpay/ipn
+- Giao thức IPN: GET
+- Chữ ký: HMACSHA512
+
+Đã kiểm thử một giao dịch VNPay Sandbox thành công trên môi trường triển khai. Các trường hợp đối soát QueryDR, IPN khi Backend không sẵn sàng và hoàn tiền cần được kiểm chứng riêng.
+
+File `render.yaml` được lưu trong repository làm cấu hình tham khảo; không được sử dụng để tạo các dịch vụ Render hiện tại.
+
 
 ## 4. GitHub Environment và secrets
 
