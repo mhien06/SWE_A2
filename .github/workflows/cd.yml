@@ -19,9 +19,6 @@ jobs:
     environment: production
     outputs:
       deployment_url: ${{ steps.deploy.outputs.url }}
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout CI-approved commit
         uses: actions/checkout@v4
@@ -34,10 +31,19 @@ jobs:
           version: 11.25.0
           run_install: false
 
+      - name: Link existing Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          EXPECTED_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          test -n "$EXPECTED_PROJECT_ID"
+          pnpm dlx vercel@65.16.0 link --yes --project swe-a2 --scope acquyff --token "$VERCEL_TOKEN"
+          test "$(jq -r '.projectId' .vercel/project.json)" = "$EXPECTED_PROJECT_ID"
+
       - name: Pull Vercel project configuration
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: pnpm dlx vercel@65.16.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
+        run: pnpm dlx vercel@65.16.0 pull --yes --environment=production --scope acquyff --token "$VERCEL_TOKEN"
 
       - name: Deploy production
         id: deploy
@@ -46,6 +52,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           url=$(pnpm dlx vercel@65.16.0 deploy --prod --yes \
+            --scope acquyff \
             --token "$VERCEL_TOKEN" \
             --meta gitCommitSha="${{ inputs.commit_sha }}" | tail -n 1)
           test -n "$url"
