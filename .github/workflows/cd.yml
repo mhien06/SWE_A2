@@ -25,7 +25,7 @@ jobs:
         shell: bash
         env:
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
-          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL }}
+          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL || 'https://swe-a2.vercel.app' }}
         run: |
           set -euo pipefail
           : "${VERCEL_DEPLOY_HOOK:?Add VERCEL_DEPLOY_HOOK to GitHub Environment production}"
@@ -95,8 +95,8 @@ jobs:
 
       - name: Verify public endpoints
         env:
-          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL }}
-          API_PRODUCTION_URL: ${{ vars.API_PRODUCTION_URL }}
+          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL || 'https://swe-a2.vercel.app' }}
+          API_PRODUCTION_URL: ${{ vars.API_PRODUCTION_URL || 'https://brewlite-a2-api-0jkv.onrender.com' }}
         run: node tools/smoke-production.mjs --attempts 36 --delay-ms 10000
 
       - name: Write deployment summary
