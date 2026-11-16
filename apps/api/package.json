@@ -26,6 +26,7 @@
     "dev": "nest start --watch",
     "db:generate": "prisma generate --config prisma7.config.ts",
     "db:migrate": "prisma migrate dev --config prisma7.config.ts",
+    "db:migrate:deploy": "prisma migrate deploy --config prisma7.config.ts",
     "db:seed": "prisma db seed --config prisma7.config.ts",
     "test:inventory": "vitest run --config vitest.config.inventory.ts",
     "test:task52": "vitest run --config vitest.config.task52.ts",
@@ -43,6 +44,7 @@
     "dotenv": "^18.0.10",
     "jose": "^6.1.0",
     "pg": "^8.23.1",
+    "prisma": "^7.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -60,7 +62,6 @@
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.4.2",
-    "prisma": "^7.10.1",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "tsx": "^4.20.6",

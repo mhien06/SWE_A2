@@ -1,0 +1,134 @@
+name: CD
+
+on:
+  workflow_call:
+    inputs:
+      commit_sha:
+        description: Commit that passed the CI workflow
+        required: true
+        type: string
+    secrets:
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+      RENDER_API_KEY:
+        required: true
+      RENDER_SERVICE_ID:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-web:
+    name: Deploy Web to Vercel
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      deployment_url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout CI-approved commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+          run_install: false
+      - name: Pull Vercel project configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm dlx vercel@65.16.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
+      - name: Deploy production
+        id: deploy
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url=$(pnpm dlx vercel@65.16.0 deploy --prod --yes \
+            --token "$VERCEL_TOKEN" \
+            --meta gitCommitSha="${{ inputs.commit_sha }}" | tail -n 1)
+          test -n "$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Vercel deployment: $url"
+
+  deploy-api:
+    name: Deploy API to Render
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      deploy_id: ${{ steps.trigger.outputs.deploy_id }}
+    steps:
+      - name: Trigger exact commit
+        id: trigger
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          response=$(curl --fail-with-body --silent --show-error \
+            --request POST \
+            --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header "Content-Type: application/json" \
+            --data '{"commitId":"${{ inputs.commit_sha }}","clearCache":"do_not_clear"}')
+          deploy_id=$(jq -er '.id' <<< "$response")
+          echo "deploy_id=$deploy_id" >> "$GITHUB_OUTPUT"
+          echo "Render deploy: $deploy_id"
+
+      - name: Wait for Render
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          DEPLOY_ID: ${{ steps.trigger.outputs.deploy_id }}
+        run: |
+          for attempt in {1..80}; do
+            response=$(curl --fail-with-body --silent --show-error \
+              --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" \
+              --header "Authorization: Bearer $RENDER_API_KEY")
+            status=$(jq -er '.status' <<< "$response")
+            echo "Render status ($attempt/80): $status"
+            case "$status" in
+              live) exit 0 ;;
+              build_failed|update_failed|pre_deploy_failed|canceled|deactivated) exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "Timed out waiting for Render deploy $DEPLOY_ID" >&2
+          exit 1
+
+  smoke-production:
+    name: Production smoke test
+    needs: [deploy-web, deploy-api]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout CI-approved commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - name: Verify public endpoints
+        env:
+          WEB_PRODUCTION_URL: ${{ vars.WEB_PRODUCTION_URL }}
+          API_PRODUCTION_URL: ${{ vars.API_PRODUCTION_URL }}
+        run: node tools/smoke-production.mjs --attempts 36 --delay-ms 10000
+
+      - name: Write deployment summary
+        run: |
+          {
+            echo "## Production deployment"
+            echo "- Commit: \`${{ inputs.commit_sha }}\`"
+            echo "- Vercel: ${{ needs.deploy-web.outputs.deployment_url }}"
+            echo "- Render deploy: \`${{ needs.deploy-api.outputs.deploy_id }}\`"
+            echo "- Smoke: frontend, /health and /health/ready passed"
+          } >> "$GITHUB_STEP_SUMMARY"

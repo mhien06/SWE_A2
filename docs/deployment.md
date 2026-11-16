@@ -1,31 +1,136 @@
-# Hướng dẫn chạy và bàn giao môi trường BrewLite
+# Task 5.3 - Production deployment và bàn giao
 
-| Thuộc tính | Trạng thái |
+| Hạng mục | Cấu hình Task 5.3 |
 |---|---|
-| Repo/nhánh tài liệu | [SWE_A2](https://github.com/mhien06/SWE_A2), `develop` |
-| Local development | Docker Compose; xem [README](../README.md#4-môi-trường-phát-triển-docker) |
-| Deployment design | [Task 3.2 – Deployment Diagram](architecture/deployment.md) |
-| Production deployment / URL | **Pending** — chưa có bằng chứng triển khai SWE_A2; owner @mhien06 / @tp9951819-cell, [#25](https://github.com/mhien06/SWE_A2/issues/25) |
-| API health evidence | **Pending** — tích hợp health check/test ở [#23](https://github.com/mhien06/SWE_A2/issues/23), deploy verification ở [#25](https://github.com/mhien06/SWE_A2/issues/25) |
+| Frontend | Next.js trên Vercel, HTTPS |
+| Backend | NestJS Docker trên Render, Git-backed Dockerfile |
+| Database | Render PostgreSQL, kết nối bằng Internal Database URL |
+| Thanh toán | VNPay Sandbox; Return về Vercel, IPN vào Render API |
+| CD | Chỉ chạy sau job CI xanh trên push `develop` |
+| Registry | Không dùng GHCR trong biến thể này; Render build đúng commit từ Git |
+| Trạng thái production | Chỉ hoàn tất sau khi điền URL và evidence thật ở §8 |
 
-## Local run
+## 1. Artifact triển khai
 
-Thực hiện đúng các lệnh, biến môi trường và lưu ý dữ liệu trong [README môi trường Docker](../README.md#4-môi-trường-phát-triển-docker). README hiện mô tả scaffold local và endpoint API scaffold; chưa có luồng nghiệp vụ. Không tự chạy migration hoặc xóa volume ngoài hướng dẫn.
+- `apps/api/Dockerfile`: multi-stage production image, non-root user.
+- `render.yaml`: Render API + PostgreSQL Blueprint; auto deploy tắt để GitHub Actions điều phối đúng SHA.
+- `.github/workflows/cd.yml`: deploy Vercel/Render, chờ Render và chạy smoke test.
+- `.github/workflows/ci.yml`: gọi CD chỉ sau toàn bộ quality gate thành công trên `develop`.
+- `tools/smoke-production.mjs`: kiểm tra frontend, `/health`, `/health/ready`.
 
-## Tài liệu thiết kế và vận hành thực tế
+Render Free không hỗ trợ `preDeployCommand`. Vì vậy image chạy `prisma migrate deploy` trước khi khởi động API; migration thất bại thì container không nhận traffic. Lệnh này idempotent và **không chạy seed production**.
 
-[architecture/deployment.md](architecture/deployment.md) là tài liệu thiết kế Deployment Diagram Task 3.2, không phải biên bản xác nhận production. Tài liệu đó mô tả nền tảng mục tiêu cùng health/logs/migration/scheduler; chi tiết production chỉ được chuyển sang trạng thái hoàn tất khi Task 5.3–5.4 có cấu hình, URL và minh chứng được review.
+## 2. Tạo Vercel project
 
-Để tránh hai hướng dẫn mâu thuẫn, file này làm đầu mối cho trạng thái chạy/bàn giao, còn deployment diagram giữ vai trò thiết kế. Khi triển khai thật, bổ sung các giá trị đã xác minh và link evidence tại đây; không chép một bản vận hành độc lập từ tài liệu kiến trúc.
+1. Import repository `mhien06/SWE_A2`.
+2. Chọn Root Directory `apps/web`, Framework Preset `Next.js`, Production Branch `develop`.
+3. Thêm Production Environment Variable `NEXT_PUBLIC_API_URL=https://<render-service>.onrender.com`.
+4. Lấy `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` và tạo token CI.
 
-## Checklist cho production handoff
+Không đặt `JWT_SECRET`, `VNP_HASH_SECRET` hoặc `DATABASE_URL` ở Vercel.
 
-| Hạng mục | Trạng thái / owner |
+
+## 3. Triển khai thực tế trên Render
+
+BrewLite A2 được triển khai thủ công trên Render, sử dụng Docker cho Backend NestJS và PostgreSQL làm cơ sở dữ liệu.
+
+| Thành phần | Cấu hình thực tế |
 |---|---|
-| Image / registry / release pipeline | Pending — @tp9951819-cell, [#24](https://github.com/mhien06/SWE_A2/issues/24) |
-| HTTPS, cấu hình VPS/cloud và production URL | Pending — @mhien06, @tp9951819-cell, [#25](https://github.com/mhien06/SWE_A2/issues/25) |
-| Migration/seed an toàn và rollback | Pending — phối hợp @computerbotver2 [#23](https://github.com/mhien06/SWE_A2/issues/23), @tp9951819-cell [#24](https://github.com/mhien06/SWE_A2/issues/24), @mhien06 [#25](https://github.com/mhien06/SWE_A2/issues/25) |
-| `GET /health` và smoke check trên môi trường đã deploy | Pending — @computerbotver2 [#23](https://github.com/mhien06/SWE_A2/issues/23), @mhien06 [#25](https://github.com/mhien06/SWE_A2/issues/25) |
-| Logs, secrets và quyền truy cập | Pending verification trong [#25](https://github.com/mhien06/SWE_A2/issues/25); không ghi secret thật vào repo/tài liệu |
-| Hướng dẫn vận hành/rollback đã chạy thử | Pending — @mhien06, @tp9951819-cell, [#25](https://github.com/mhien06/SWE_A2/issues/25) |
+| Web Service | `brewlite-a2-api` |
+| Runtime | Docker |
+| Dockerfile | `apps/api/Dockerfile` |
+| Region | Singapore |
+| Database | `brewlite-a2-db` |
+| PostgreSQL | Version 17 |
+| Auto-Deploy | Off |
+| Nhánh triển khai ban đầu | `ci/task5-cloud-delivery` |
 
+Backend sử dụng Internal Database URL để kết nối PostgreSQL. Prisma migration được thực thi khi khởi động container. Dữ liệu mẫu được bổ sung riêng sau khi tạo database.
+
+Frontend được triển khai bằng Next.js trên Vercel, sử dụng biến `NEXT_PUBLIC_API_URL` để gọi Backend qua HTTPS.
+
+### Địa chỉ triển khai
+
+- Frontend: https://swe-a2.vercel.app
+- Backend: https://brewlite-a2-api-0jkv.onrender.com
+- Health: https://brewlite-a2-api-0jkv.onrender.com/health
+- Readiness: https://brewlite-a2-api-0jkv.onrender.com/health/ready
+
+### VNPay Sandbox
+
+- Return URL: https://swe-a2.vercel.app/checkout/return
+- IPN URL: https://brewlite-a2-api-0jkv.onrender.com/payments/vnpay/ipn
+- Giao thức IPN: GET
+- Chữ ký: HMACSHA512
+
+Đã kiểm thử một giao dịch VNPay Sandbox thành công trên môi trường triển khai. Các trường hợp đối soát QueryDR, IPN khi Backend không sẵn sàng và hoàn tiền cần được kiểm chứng riêng.
+
+File `render.yaml` được lưu trong repository làm cấu hình tham khảo; không được sử dụng để tạo các dịch vụ Render hiện tại.
+
+
+## 4. GitHub Environment và secrets
+
+Tạo Environment `production` rồi cấu hình:
+
+| Loại | Tên | Nội dung |
+|---|---|---|
+| Secret | `VERCEL_TOKEN` | Token deploy Vercel |
+| Secret | `VERCEL_ORG_ID` | Team/User ID của Vercel |
+| Secret | `VERCEL_PROJECT_ID` | Project ID của Vercel |
+| Secret | `RENDER_API_KEY` | Render API key có quyền deploy service |
+| Secret | `RENDER_SERVICE_ID` | ID dạng `srv-...` |
+| Variable | `WEB_PRODUCTION_URL` | URL Vercel cố định |
+| Variable | `API_PRODUCTION_URL` | URL Render cố định |
+
+Không ghi các giá trị trên vào commit, PR description, ảnh chụp hoặc workflow log.
+
+## 5. Release và smoke test
+
+1. Merge PR vào `develop`.
+2. Workflow `CI` chạy lint, test, build và Task 5.2 integration/E2E.
+3. Job `deploy-production` chỉ chạy khi job `ci` thành công.
+4. Vercel deploy frontend; Render build `apps/api/Dockerfile` từ cùng SHA.
+5. Render chạy migration rồi API; workflow chờ trạng thái `live`.
+6. Smoke test phải đạt cả frontend, `/health` và `/health/ready`.
+
+Chạy lại smoke test thủ công:
+
+```bash
+node tools/smoke-production.mjs \
+  --web https://<web>.vercel.app \
+  --api https://<api>.onrender.com
+```
+
+Kiểm tra thêm CORS, VNPay Return/IPN và QueryDR trên URL public. Không dùng giao dịch tiền thật.
+
+## 6. Backup, migration và rollback
+
+- Trước migration có thay đổi dữ liệu/phá vỡ tương thích: tạo backup PostgreSQL và ghi thời điểm/owner.
+- Migration phải backward-compatible với bản app trước; không xóa cột trong cùng release thêm code thay thế.
+- Rollback app: revert commit lỗi qua PR vào `develop`; CI xanh sẽ deploy lại commit revert.
+- Có thể deploy SHA cũ bằng Render/Vercel dashboard khi khẩn cấp, sau đó vẫn phải tạo PR đồng bộ lịch sử.
+- Rollback app **không tự đảo schema**. Chỉ chạy down/fix-forward migration khi đã kiểm tra backup và có người review.
+
+## 7. Hạn chế vận hành
+
+- Render Free có cold start; lần gọi đầu có thể chậm. Smoke workflow retry tối đa khoảng 6 phút.
+- Scheduler nằm trong API nên không chạy khi instance ngủ; khi thức dậy phải tiếp tục đối soát `PENDING/UNKNOWN` bằng QueryDR.
+- Filesystem container là ephemeral; dữ liệu bền vững chỉ lưu PostgreSQL.
+- Database và gói miễn phí có giới hạn/thời hạn; kiểm tra lại trước buổi demo.
+
+## 8. Evidence bàn giao
+
+Chưa đánh dấu Task 5.3 hoàn tất cho tới khi điền đủ dữ liệu thật:
+
+| Evidence | Giá trị |
+|---|---|
+| Commit SHA đã deploy | Pending |
+| GitHub Actions run | Pending |
+| Vercel production URL / deployment ID | Pending |
+| Render API URL / deploy ID | Pending |
+| `/health` và `/health/ready` | Pending |
+| VNPay Return/IPN/QueryDR | Pending |
+| Backup/rollback drill | Pending |
+| Log đã kiểm tra không lộ secret | Pending |
+
+Lưu ảnh/log đã che secret dưới `docs/evidence/task-5.3/` hoặc đính kèm trực tiếp vào Issue #24/PR.
