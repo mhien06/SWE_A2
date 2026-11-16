@@ -1,3 +1,4 @@
+
 name: CD
 
 on:
@@ -7,17 +8,6 @@ on:
         description: Commit that passed the CI workflow
         required: true
         type: string
-    secrets:
-      VERCEL_TOKEN:
-        required: true
-      VERCEL_ORG_ID:
-        required: true
-      VERCEL_PROJECT_ID:
-        required: true
-      RENDER_API_KEY:
-        required: true
-      RENDER_SERVICE_ID:
-        required: true
 
 permissions:
   contents: read
@@ -43,10 +33,12 @@ jobs:
         with:
           version: 11.25.0
           run_install: false
+
       - name: Pull Vercel project configuration
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: pnpm dlx vercel@65.16.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
+
       - name: Deploy production
         id: deploy
         shell: bash
