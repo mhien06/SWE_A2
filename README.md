@@ -203,3 +203,14 @@ Backlog của dự án được quản lý trực tiếp trên [GitHub Issues](h
 Kiểm thử Task 5.2: [hướng dẫn cài đặt/chạy và phân biệt payment giả lập với Sandbox thật](tests/task52/README.md).
 
 API contract, migration/seed, cách chạy, kiểm thử và minh chứng demo được ghi tại [docs/task4.3-menu-mvp.md](docs/task4.3-menu-mvp.md).
+
+
+---
+
+## Bàn giao Task 5.4 và minh chứng triển khai A2 (cập nhật 17/11/2026)
+
+- **Frontend:** https://swe-a2.vercel.app · **API:** https://brewlite-a2-api-0jkv.onrender.com
+- **CI/CD đã xác minh:** [GitHub Actions run #26](https://github.com/mhien06/SWE_A2/actions/runs/43946846633), commit `3934c153a0c9c5e7cc9cc9f744d92abde2894d4e`, CI/Render/Vercel Deploy Hook/smoke đều PASS. Hook thành công không tự chứng minh Vercel build của đúng SHA đã hoàn tất.
+- **Hồ sơ:** [Bàn giao](docs/task5.4-handover.md) · [Release notes dự thảo](docs/task5.4-release-notes.md) · [Kịch bản demo](docs/task5.4-demo.md) · [Sprint Review/Retro dự thảo](docs/task5.4-sprint-review-retro.md) · [Runbook](docs/deployment.md) · [Checklist nộp bài](docs/submission-checklist.md).
+- **Chưa có bằng chứng production riêng:** QueryDR Sandbox trực tiếp, rollback drill và IPN khi Render ngủ; kiểm thử Task 5.2 sử dụng payment provider mô phỏng.
+- **Phát hành:** Git tag/GitHub Release chỉ tạo sau khi review và chốt commit; hiện chưa phát hành tag của Task 5.4.
