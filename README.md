@@ -81,7 +81,7 @@ Cài Docker Desktop, bật Linux containers. Chạy các lệnh từ thư mục 
 
 Ảnh dev dùng Node.js 24 và pnpm 11.25.0. Dependencies được cài trong Linux, không mount `node_modules` Windows. Web `app/`, `public/` và API `src/`, `prisma/`, `prisma7.config.ts` được bind mount; sửa source có hot reload (polling cho Windows). Khi đổi dependencies, lockfile hoặc config khác, chạy lại `docker compose up -d --build`. Web đang dùng Webpack cho chế độ dev với polling.
 
-`NEXT_PUBLIC_API_URL` là địa chỉ API cho trình duyệt; `API_INTERNAL_URL` dành cho truy cập từ container Web. Web hỗ trợ đăng nhập/đăng ký, Cart, Orders và Staff orders. Checkout/Payment Return, VNPay IPN và QueryDR thuộc Issue #22/#23 và cần tích hợp trước khi có luồng thanh toán end-to-end. Healthcheck Web/API kiểm tra HTTP `/`; PostgreSQL dùng `pg_isready`, API chỉ khởi động sau khi database healthy.
+`NEXT_PUBLIC_API_URL` là địa chỉ API cho trình duyệt; `API_INTERNAL_URL` dành cho truy cập từ container Web. Web hỗ trợ đăng nhập/đăng ký, Cart, Orders và Staff orders. Checkout/Payment Return và nghiệp vụ VNPay Sandbox đã được tích hợp trong Sprint 2 (Issue #22); bộ kiểm thử tích hợp/E2E thuộc Issue #23. IPN đã được kiểm chứng trong các lượt thanh toán Sandbox trên môi trường triển khai; QueryDR được triển khai nhưng kết quả gọi trực tiếp VNPay Sandbox chưa xác nhận thành công. Healthcheck của môi trường Compose và readiness production được mô tả riêng trong [runbook](docs/deployment.md).
 
 ### Prisma và dữ liệu
 
@@ -98,7 +98,7 @@ Khi chạy Prisma trên host, cung cấp `DATABASE_URL` qua môi trường hoặ
 
 PostgreSQL 17 lưu dữ liệu trong named volume `swe-a2-dev_postgres_data`, độc lập với container PostgreSQL đã có trên máy. `docker compose stop` hoặc `docker compose down` không xóa volume. **Không dùng `docker compose down -v` hoặc xóa volume.** Đổi user/password/database trong `.env` không cập nhật database đã khởi tạo; giữ thông tin cũ hoặc quản trị database riêng, không xóa dữ liệu để sửa lỗi.
 
-Xem log bằng `docker compose logs --tail=100 api web postgres`. Đây là môi trường phát triển local, không bao gồm production deploy, CI/CD, checkout hoặc thanh toán. Hướng dẫn Menu MVP nằm tại `docs/task4.3-menu-mvp.md`.
+Xem log bằng `docker compose logs --tail=100 api web postgres`. Compose chỉ phục vụ chạy và kiểm thử ở local; đây không phải môi trường production. Các chức năng checkout/thanh toán tồn tại trong ứng dụng, nhưng muốn gọi VNPay Sandbox cần cấu hình riêng theo tài liệu và tuyệt đối không dùng secret production ở local. Hướng dẫn Menu MVP nằm tại `docs/task4.3-menu-mvp.md`.
 
 Nếu đang chạy Web/API/PostgreSQL trực tiếp trên các cổng mặc định, có thể thử Compose mà không dừng chúng bằng PowerShell:
 
@@ -195,8 +195,8 @@ Backlog của dự án được quản lý trực tiếp trên [GitHub Issues](h
 | [#21](https://github.com/mhien06/SWE_A2/issues/21) | **[Task 5.1]** Hoàn thiện UI, JWT/lỗi, chi tiết đơn và component test (`apps/web`) | Chí Thành (`@chithanh2k6`) | Task 4 (#16–#19), #20 |
 | [#22](https://github.com/mhien06/SWE_A2/issues/22) | **[Task 5.1]** VNPay Sandbox, IPN Webhook và job đối soát (`PaymentModule`, `SchedulerModule`) | Nguyễn Minh Hiển (`@mhien06`) | #20 |
 | [#23](https://github.com/mhien06/SWE_A2/issues/23) | **[Task 5.2]** Tích hợp, kiểm thử (unit/integration/E2E), Docker Compose và `/health` | Trần Kim Xuyến (`@computerbotver2`) | #20, #21, #22 |
-| [#24](https://github.com/mhien06/SWE_A2/issues/24) | **[Task 5.3]** Continuous Delivery – Docker image, GHCR và pipeline triển khai | Phạm Minh Thiện (`@tp9951819-cell`) | #19, #23 |
-| [#25](https://github.com/mhien06/SWE_A2/issues/25) | **[Task 5.3 + 5.4]** Deploy production HTTPS, smoke test, rollback, release notes, demo & Sprint Review/Retro | Nguyễn Minh Hiển (`@mhien06`) + Phạm Minh Thiện (`@tp9951819-cell`) | #23, #24 |
+| [#24](https://github.com/mhien06/SWE_A2/issues/24) | **[Task 5.3]** CI/CD và triển khai Docker API trên Render, Next.js trên Vercel (Git-backed, không sử dụng GHCR) — **Đã đóng** | Phạm Minh Thiện (`@tp9951819-cell`) | #19, #23 |
+| [#25](https://github.com/mhien06/SWE_A2/issues/25) | **[Task 5.4]** Bàn giao, Release, demo trực tiếp và Sprint Review/Retrospective — **Đang thực hiện** | Nguyễn Minh Hiển (`@mhien06`) | #23, #24 |
 
 ## 7. Task 4.3 — Menu MVP
 
@@ -211,6 +211,6 @@ API contract, migration/seed, cách chạy, kiểm thử và minh chứng demo �
 
 - **Frontend:** https://swe-a2.vercel.app · **API:** https://brewlite-a2-api-0jkv.onrender.com
 - **CI/CD đã xác minh:** [GitHub Actions run #26](https://github.com/mhien06/SWE_A2/actions/runs/43946846633), commit `3934c153a0c9c5e7cc9cc9f744d92abde2894d4e`, CI/Render/Vercel Deploy Hook/smoke đều PASS. Hook thành công không tự chứng minh Vercel build của đúng SHA đã hoàn tất.
-- **Hồ sơ:** [Bàn giao](docs/task5.4-handover.md) · [Release notes dự thảo](docs/task5.4-release-notes.md) · [Kịch bản demo](docs/task5.4-demo.md) · [Sprint Review/Retro dự thảo](docs/task5.4-sprint-review-retro.md) · [Runbook](docs/deployment.md) · [Checklist nộp bài](docs/submission-checklist.md).
-- **Chưa có bằng chứng production riêng:** QueryDR Sandbox trực tiếp, rollback drill và IPN khi Render ngủ; kiểm thử Task 5.2 sử dụng payment provider mô phỏng.
-- **Phát hành:** Git tag/GitHub Release chỉ tạo sau khi review và chốt commit; hiện chưa phát hành tag của Task 5.4.
+- **Hồ sơ:** [Bàn giao](docs/task5.4-handover.md) · [Release Notes trên GitHub](https://github.com/mhien06/SWE_A2/releases/tag/v1.0.0-a2) · [Bản thảo ghi chú phát hành](docs/task5.4-release-notes.md) · [Kịch bản demo trực tiếp](docs/task5.4-demo.md) · [Sprint Review/Retro dự thảo](docs/task5.4-sprint-review-retro.md) · [Runbook triển khai và rollback](docs/deployment.md) · [Checklist nộp bài](docs/submission-checklist.md).
+- **Giới hạn kiểm chứng:** Task 5.2 dùng payment provider mô phỏng; QueryDR trực tiếp đã được gửi tới VNPay Sandbox nhưng nhận mã nghiệp vụ `99` (`Unexpected error`), chưa PASS. Chưa thực nghiệm IPN khi backend không sẵn sàng hoặc rollback production. Đây là các bài kiểm thử bổ sung không được đề bài yêu cầu đích danh; vẫn giữ hướng dẫn rollback và không trình bày các bài test này là PASS.
+- **Phát hành:** Đã tạo [GitHub Release BrewLite A2 – Version 1.0.0](https://github.com/mhien06/SWE_A2/releases/tag/v1.0.0-a2) với tag `v1.0.0-a2`. PR [#45](https://github.com/mhien06/SWE_A2/pull/45) đã merge `develop` vào `main` ngày 17/11/2026 (merge commit `3757c563189ae68190a17e0480af6ec1e1f0b228`). Tag Release được tạo trước lần merge đó; không mặc định tag trỏ tới commit mới nhất của `main`. Trước khi nộp, đối chiếu nội dung phiên bản được demo với Release và production.
