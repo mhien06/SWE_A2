@@ -112,3 +112,12 @@ jobs:
           path: ci-logs/
           if-no-files-found: warn
           retention-days: 14
+
+  deploy-production:
+    name: Deploy production after CI
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: ci
+    uses: ./.github/workflows/cd.yml
+    with:
+      commit_sha: ${{ github.sha }}
+    secrets: inherit

@@ -36,7 +36,7 @@ Bản vẽ là **mục tiêu triển khai** cho SWE_A2, không phải bằng ch�
 | Cloud DB | Render Postgres Free | PostgreSQL có lưu trữ quản lý độc lập API; Prisma Migrate | §4.2 DB, §8.1 |
 | Ngoại vi | VNPay Sandbox | Redirect/Return URL, IPN (server-to-server), QueryDR | §4.1, §5 PaymentModule |
 
-**Docker image & registry:** PDF yêu cầu thể hiện container registry. Sơ đồ đưa **GHCR là lựa chọn dự kiến**, không khẳng định đã cấu hình. Theo Render, backend **có thể tự build image từ Dockerfile** trong repo (Git-backed), không bắt buộc push lên GHCR. Nếu sau này 5.3 chọn phương án build/push GHCR và Render pull image, cần cập nhật mũi tên/quy trình trong sơ đồ cho khớp cấu hình thật.
+**Docker image & registry:** Task 5.3 chọn phương án **Git-backed Dockerfile**: Render build `apps/api/Dockerfile` từ đúng commit SHA do GitHub Actions yêu cầu. GHCR trên sơ đồ chỉ là phương án kiến trúc, không nằm trong luồng release thực tế và không được dùng làm evidence.
 
 ## 4. Luồng kết nối, giao thức và cổng
 
@@ -81,7 +81,7 @@ Task 3.1 dùng **15 phút** là hạn ORDER `PENDING`; mỗi payment attempt có
 | IPN đến khi backend ngủ | Có nguy cơ chậm/lỗi/timeout | Phải thử IPN thật trên URL public và đối soát QueryDR khi API hoạt động. **Không hứa IPN tức thời/độ tin cậy 24/7** với Render Free |
 | Render PostgreSQL Free | Có dữ liệu persistent riêng service nhưng DB Free **hết hạn sau 30 ngày**, 1 GB theo chính sách công bố | Lưu ý ngày tạo DB; chuẩn bị backup/seed trước ngày nghiệm thu; không coi free DB là hạ tầng production lâu dài |
 | Render Free service filesystem | Ephemeral; file ghi local không bền | Không lưu DB/file tải lên ở disk web service; dùng PostgreSQL |
-| CI/CD và GHCR | Chưa được chứng minh đã cấu hình trong SWE_A2 | Task 4.4/5.3 cần PR, workflow, image tag (SHA), kết quả deploy và rollback; diagram để ở trạng thái dự kiến |
+| CI/CD và registry | Workflow và Git-backed Dockerfile có trong repo; production evidence chưa có | Task 5.3 cần run xanh, SHA, URL, deploy ID và rollback evidence; không dùng GHCR trong biến thể này |
 | Vercel Hobby | Miễn phí cho cá nhân/phi thương mại, có giới hạn tài nguyên | Sử dụng đúng mục đích đồ án, không tuyên bố khả năng mở rộng thương mại |
 
 Dẫn chứng chính sách: [Render Free](https://render.com/docs/free), [Render Docker](https://render.com/docs/docker), [Render existing image / GHCR](https://render.com/docs/deploying-an-image), [Vercel Hobby](https://vercel.com/docs/plans/hobby), [GitHub Packages](https://docs.github.com/en/billing/concepts/product-billing/github-packages). Đã tra cứu vào 15/11/2026; các mức giới hạn có thể thay đổi.
@@ -94,7 +94,7 @@ Dẫn chứng chính sách: [Render Free](https://render.com/docs/free), [Render
 | Next.js/CDN | Vercel node; §3 | Đã mô tả |
 | NestJS service/container | Render node; §3 | Đã mô tả |
 | PostgreSQL + persistent storage | Render Postgres; §3, §6 | Đã mô tả (đang lựa chọn DB cloud cho A2) |
-| Container registry + deployment platform | GHCR dự kiến, GitHub Actions, Vercel, Render; §3, §7 | Đã mô tả, cần xác nhận phương thức deploy ở Task 5.3 |
+| Container registry + deployment platform | GitHub Actions, Vercel, Render; GHCR chỉ là phương án trên sơ đồ | Task 5.3 chọn Git-backed Dockerfile; chưa có evidence production |
 | HTTPS, network nội bộ, cổng | Các mũi tên trong sơ đồ; §4 | Đã mô tả |
 | Secret/env, health, log | Node operations; §5–§6 | Đã mô tả |
 | Ranh giới Local / CI / Production | 3 vùng nét đứt trong sơ đồ; §3 | Đã mô tả |
@@ -107,7 +107,7 @@ Dẫn chứng chính sách: [Render Free](https://render.com/docs/free), [Render
 
 - Task 4: Khởi tạo `apps/web`, `apps/api`, cấu hình CI; sau đó cập nhật tên biến/cổng chính thức nếu thay đổi.
 - Task 5.2: `docker-compose.yml` chạy local 3 dịch vụ; seed/migration và test health endpoints.
-- Task 5.3: Chọn Git-backed Dockerfile (đơn giản) hoặc GHCR image-backed (cần workflow push image); chạy CI quality gates, smoke test, rollback.
+- Task 5.3: Đã chọn Git-backed Dockerfile; chạy CI quality gates, deploy đúng SHA, smoke test và ghi evidence rollback.
 - Task 5.4: Bổ sung URL frontend/API thật, log minh chứng deploy, README, release notes, demo; xác nhận không public DB và không lộ secret.
 
 ## 10. Nguồn và giới hạn đánh giá
