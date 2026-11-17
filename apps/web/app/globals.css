@@ -241,7 +241,9 @@ button:disabled { opacity: .58; cursor: not-allowed; }
 .order-detail-card > h1 { margin: .3rem 0 1rem; }
 .staff-order-card { display: grid; gap: .8rem; }
 .staff-order-card ul { padding-left: 1.2rem; }
-.staff-actions, .staff-cancel { display: grid; gap: .7rem; }
+.staff-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; }
+.staff-actions > button { width: auto; }
+.staff-cancel { display: grid; gap: .7rem; }
 
 @media (min-width: 760px) {
   .cart-layout { grid-template-columns: minmax(0, 1.5fr) minmax(18rem, .8fr); align-items: start; }
@@ -368,6 +370,55 @@ body .detail-image-wrap { position: relative; top: auto; aspect-ratio: 5 / 4; ma
 .order-audit p { font-size:.9rem; }
 .staff-actions { flex-wrap:wrap; gap:10px; }
 
+/* Operations workspace */
+.operations-page { max-width: 1240px; margin: 0 auto; }
+.operations-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 8px 0 24px; padding: 28px; border-radius: 24px; background: linear-gradient(135deg, #123c34, #08765f); color: white; }
+.operations-heading h1 { margin: 0; color: white; font-size: clamp(2.2rem, 5vw, 4rem); letter-spacing: -.05em; line-height: 1; }
+.operations-heading .muted { margin-top: 12px; color: #d5e7dd; }
+.operations-metric { flex: 0 0 auto; display: grid; min-width: 150px; padding: 18px; border: 1px solid #ffffff30; border-radius: 18px; background: #ffffff12; }
+.operations-metric strong { color: var(--lime); font-size: 34px; line-height: 1; }
+.operations-metric span { margin-top: 6px; color: #d5e7dd; font-size: 13px; }
+.operations-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: white; }
+.operations-toolbar button { width: auto; min-height: 44px; }
+.operations-toolbar .is-selected { background: #08765f; color: white; }
+.operations-toolbar .toolbar-refresh { margin-left: auto; }
+.lookup-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: white; }
+.lookup-form label, .product-editor label, .availability-action label { display: grid; gap: 6px; font-size: 14px; font-weight: 700; }
+.lookup-form button { min-height: 48px; }
+.operations-order-card { padding: 22px; border-radius: 18px; box-shadow: 0 12px 32px #123c3409; }
+.operations-order-card > .staff-actions { padding-top: 14px; border-top: 1px solid var(--line); }
+.operations-order-card .staff-cancel { width: 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 14px; border-radius: 14px; background: #fff6f3; }
+.operations-panel { margin: 24px 0 36px; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: white; box-shadow: 0 12px 36px #123c3408; scroll-margin-top: 110px; }
+.panel-heading, .section-heading, .product-card-top, .card-action-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.panel-heading { margin-bottom: 20px; }
+.panel-heading h2, .section-heading h2 { margin: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.form-grid .wide-field { grid-column: 1 / -1; }
+.text-button { width: auto; padding: 6px 4px; color: #08765f; background: transparent; text-decoration: underline; }
+.section-heading { margin: 30px 0 18px; }
+.manager-product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.manager-product-card { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: white; box-shadow: 0 10px 30px #123c3407; }
+.manager-product-card h3 { font-size: 24px; letter-spacing: -.02em; }
+.manager-product-card > .muted { min-height: 48px; }
+.status-pill { display: inline-flex; width: fit-content; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.status-pill.is-active { color: #08765f; background: #e2f4e8; }
+.status-pill.is-paused { color: #8c372d; background: #ffebe6; }
+.card-action-row { justify-content: flex-start; }
+.card-action-row button { width: auto; }
+.availability-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.availability-action button { min-height: 48px; }
+.inline-history { display: grid; gap: 10px; padding: 16px; border-radius: 14px; background: #f1f7f3; }
+.history-entry { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; padding-top: 10px; border-top: 1px solid #d7e5dc; }
+.history-entry p { grid-column: 1 / -1; }
+.history-entry small { color: var(--muted); }
+.feedback-banner, .success-banner, .inline-feedback { padding: 12px 14px; border-radius: 12px; }
+.feedback-banner { background: #fff0ec; }
+.success-banner { margin: 12px 0; color: #075c46; background: #e4f4e9; }
+.inline-feedback { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #8c372d; background: #fff0ec; font-size: 13px; }
+.summary-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.summary-actions button { width: auto; }
+.footer-intro h2 { white-space: pre-line; }
+
 /* Compact touch layout; desktop retains the split hero. */
 @media (max-width: 899px) {
   body main { padding: 16px 16px 36px; }
@@ -384,6 +435,19 @@ body .detail-image-wrap { position: relative; top: auto; aspect-ratio: 5 / 4; ma
   body .account-identity { font-size: 13px; max-width: 145px; }
   body .account-identity span { font-size: 12px; }
   body .product-grid { gap: 16px; }
+}
+
+@media (max-width: 680px) {
+  .operations-heading { align-items: stretch; flex-direction: column; padding: 22px; }
+  .operations-metric { min-width: 0; }
+  .operations-toolbar { align-items: stretch; }
+  .operations-toolbar button, .operations-toolbar .toolbar-refresh { width: 100%; margin-left: 0; }
+  .lookup-form, .form-grid, .availability-action, .operations-order-card .staff-cancel { grid-template-columns: 1fr; }
+  .form-grid .wide-field { grid-column: auto; }
+  .manager-product-grid { grid-template-columns: 1fr; }
+  .card-action-row { align-items: stretch; flex-direction: column; }
+  .card-action-row button { width: 100%; }
+  .section-heading { align-items: end; }
 }
 @media (max-width: 759px) {
   body main { padding-inline: 12px; }

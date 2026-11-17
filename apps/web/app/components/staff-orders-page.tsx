@@ -34,17 +34,19 @@ export default function StaffOrdersPage() {
   const { session, ready } = useAuthSession();
   const [lookup, setLookup] = useState("");
   const [lookupId, setLookupId] = useState("");
-  const [review, setReview] = useState(false);
-  const [all, setAll] = useState(false);
+  const [mode, setMode] = useState<"active" | "review" | "history">("active");
   const allowed = ready && !!session && ["STAFF", "MANAGER"].includes(session.user.role);
-  const path = review ? "/staff/orders?review=true" : all ? "/staff/orders?all=true" : "/staff/orders";
+  const path = mode === "review" ? "/staff/orders?review=true" : mode === "history" ? "/staff/orders?all=true" : "/staff/orders";
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const loadOrders = useCallback(async () => {
+    setError("");
     try {
       setOrders(await apiFetch<StaffOrder[]>(path));
     } catch (caught) {
@@ -82,6 +84,7 @@ export default function StaffOrdersPage() {
         body: JSON.stringify({ status }),
       });
       await loadOrders();
+      setNotice(`Đã chuyển ${order.orderCode} sang ${statusLabels[status]}.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không cập nhật được trạng thái");
     } finally {
@@ -104,6 +107,7 @@ export default function StaffOrdersPage() {
       });
       if (result.pendingCancellation) {setError(result.message ?? "Đang đối soát, đơn chưa hủy.");return;}
       await loadOrders();
+      setNotice(`Đã hủy ${order.orderCode}.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không thể hủy đơn");
     } finally {
@@ -130,18 +134,25 @@ export default function StaffOrdersPage() {
   }
 
   return (
-    <section className="customer-page">
+    <section className="customer-page operations-page">
       <span className="eyebrow">STAFF OPERATIONS</span>
-      <h1>{review ? "Giao dịch cần đối soát" : all ? "Lịch sử vận hành" : "Đơn cần xử lý"}</h1><div className="staff-actions"><button onClick={()=>setReview(!review)}>{review ? "Thoát bộ lọc đối soát" : "Giao dịch cần đối soát"}</button><button onClick={()=>{setAll(!all);setReview(false)}}>{all ? "Xem đơn cần xử lý" : "Xem 200 đơn gần nhất"}</button><button onClick={()=>void loadOrders()}>Làm mới</button></div>
+      <div className="operations-heading"><div><h1>{mode === "review" ? "Giao dịch cần đối soát" : mode === "history" ? "Lịch sử vận hành" : "Đơn cần xử lý"}</h1><p className="muted">Theo dõi đơn, chuyển bước pha chế và xử lý ngoại lệ thanh toán.</p></div><div className="operations-metric"><strong>{orders.length}</strong><span>đơn đang hiển thị</span></div></div>
+      <div className="operations-toolbar" role="group" aria-label="Bộ lọc đơn hàng">
+        <button type="button" className={mode === "active" ? "is-selected" : "secondary-button"} aria-pressed={mode === "active"} onClick={() => setMode("active")}>Cần xử lý</button>
+        <button type="button" className={mode === "review" ? "is-selected" : "secondary-button"} aria-pressed={mode === "review"} onClick={() => setMode("review")}>Cần đối soát</button>
+        <button type="button" className={mode === "history" ? "is-selected" : "secondary-button"} aria-pressed={mode === "history"} onClick={() => setMode("history")}>200 đơn gần nhất</button>
+        <button type="button" className="secondary-button toolbar-refresh" disabled={refreshing} onClick={() => { setRefreshing(true); setNotice(""); void loadOrders().then(() => setNotice("Danh sách đã được cập nhật.")).finally(() => setRefreshing(false)); }}>{refreshing ? "Đang tải…" : "Làm mới"}</button>
+      </div>
       <p className="muted">Trạng thái chỉ được cập nhật khi backend xác nhận chuyển bước hợp lệ.</p>
-      <form className="staff-actions" onSubmit={e=>{e.preventDefault();setLookupId(lookup.trim())}}><label>Tra cứu mã đơn (UUID)<input required pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}" value={lookup} onChange={e=>setLookup(e.target.value)} /></label><button>Tra cứu</button></form>{lookupId&&<OrderAudit key={lookupId} orderId={lookupId}/>}
+      <form className="lookup-form" onSubmit={e=>{e.preventDefault();setLookupId(lookup.trim())}}><label>Tra cứu mã đơn (UUID)<input required pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}" value={lookup} onChange={e=>setLookup(e.target.value)} placeholder="Nhập UUID của đơn" /></label><button>Tra cứu</button></form>{lookupId&&<OrderAudit key={lookupId} orderId={lookupId}/>}
       {error && <p role="alert" className="form-error">{error}</p>}
+      {notice && <p role="status" className="success-banner">{notice}</p>}
       {orders.length === 0 ? (
         <div className="state-box">Hiện không có đơn cần xử lý.</div>
       ) : (
         <div className="staff-order-list">
           {orders.map((order) => (
-            <article className="staff-order-card" key={order.id}>
+            <article className="staff-order-card operations-order-card" key={order.id}>
               <div className="cart-item-heading">
                 <div>
                   <span className="eyebrow">{order.orderCode}</span>
