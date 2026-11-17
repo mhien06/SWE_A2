@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthSessionProvider } from "./components/auth-session";
 import SiteNavigation from "./components/site-navigation";
+import SiteFooter from "./components/site-footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,14 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </header>
           <main id="main-content">{children}</main>
-          <footer className="site-footer">
-            <div className="footer-inner">
-              <div className="footer-intro"><Link href="/" className="footer-logo">BrewLite<span>®</span></Link><h2>Một chút xanh.<br />Một ngày lành.</h2><p>Cà phê đậm đà, trà thanh mát và những khoảng nghỉ dành riêng cho bạn.</p></div>
-              <div className="footer-column"><h3>Khám phá</h3><Link href="/">Thực đơn</Link><Link href="/cart">Giỏ hàng</Link><Link href="/orders">Đơn hàng của bạn</Link></div>
-              <div className="footer-column"><h3>Hẹn bạn tại quầy</h3><p>Chọn món yêu thích.<br />Tùy chỉnh theo gu.<br />Đặt trước và nhận tại cửa hàng.</p><Link href="/" className="footer-cta">Chọn một ly ngay ↗</Link></div>
-            </div>
-            <div className="footer-bottom"><span>© BrewLite. Coffee &amp; good days.</span><span>Được pha chế với sự tận tâm ✳</span></div>
-          </footer>
+          <SiteFooter />
         </AuthSessionProvider>
       </body>
     </html>

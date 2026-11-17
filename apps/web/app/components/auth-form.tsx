@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { apiFetch, type ApiSession } from "../lib/api";
 import { useAuthSession } from "./auth-session";
+import { roleHome } from "./customer-menu-guard";
 
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         },
       );
       setSession(session);
-      router.push(registering ? "/cart" : "/");
+      router.push(registering ? "/cart" : roleHome(session.user.role));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không thể đăng nhập");
     } finally {

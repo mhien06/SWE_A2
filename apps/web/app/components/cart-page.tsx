@@ -36,8 +36,10 @@ export default function CartPage() {
   const router = useRouter();
   const { session, ready } = useAuthSession();
   const [cart, setCart] = useState<Cart | null>(null);
-  const [points, setPoints] = useState(0);
+  const [pointsInput, setPointsInput] = useState("0");
   const [rate, setRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(true);
+  const [rateError, setRateError] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,16 @@ export default function CartPage() {
   useEffect(() => {
     if (!ready || !session) return;
     let active = true;
-    apiFetch<{redemptionVndPerPoint:number|null}>("/loyalty").then(policy => { if(active) setRate(policy.redemptionVndPerPoint); }).catch(() => { /* Keep redemption disabled until its policy is available. */ });
+    apiFetch<{redemptionVndPerPoint:number|null}>("/loyalty")
+      .then((policy) => {
+        if (!active) return;
+        setRate(policy.redemptionVndPerPoint);
+        setRateError(policy.redemptionVndPerPoint ? "" : "Cửa hàng chưa cấu hình tỷ lệ sử dụng điểm.");
+      })
+      .catch((caught: unknown) => {
+        if (active) setRateError(caught instanceof Error ? caught.message : "Không tải được chính sách điểm");
+      })
+      .finally(() => { if (active) setRateLoading(false); });
     apiFetch<Cart>("/cart")
       .then((current) => {
         if (active) setCart(current);
@@ -101,8 +112,23 @@ export default function CartPage() {
     }
   }
 
+  const points = pointsInput === "" ? 0 : Number(pointsInput);
   const maxPoints = rate && cart ? Math.max(0, Math.min(session?.user.pointsBalance ?? 0, Math.floor(cart.total / rate))) : 0;
   const invalidPoints = !Number.isInteger(points) || points < 0 || points > maxPoints;
+
+  async function reloadRate() {
+    setRateLoading(true);
+    setRateError("");
+    try {
+      const policy = await apiFetch<{redemptionVndPerPoint:number|null}>("/loyalty");
+      setRate(policy.redemptionVndPerPoint);
+      if (!policy.redemptionVndPerPoint) setRateError("Cửa hàng chưa cấu hình tỷ lệ sử dụng điểm.");
+    } catch (caught) {
+      setRateError(caught instanceof Error ? caught.message : "Không tải được chính sách điểm");
+    } finally {
+      setRateLoading(false);
+    }
+  }
 
   async function getQuote() {
     if (invalidPoints) return;
@@ -244,33 +270,44 @@ export default function CartPage() {
           <aside className="order-summary">
             <h2>Tóm tắt đơn hàng</h2>
             <p>Tạm tính <strong>{formatVndPrice(cart.total)}</strong></p>
-            <label>
+            <label htmlFor="points-redeemed">
               Điểm sử dụng (số dư: {session.user.pointsBalance})
               <input
+                id="points-redeemed"
                 type="number"
+                inputMode="numeric"
                 min={0}
                 max={maxPoints}
                 step={1}
-                disabled={!rate}
-                value={points}
+                disabled={rateLoading || !rate}
+                value={pointsInput}
                 onChange={(event) => {
-                  setPoints(Math.max(0, Number(event.target.value) || 0));
+                  const next = event.target.value;
+                  if (next === "" || /^\d+$/.test(next)) setPointsInput(next);
                   setQuote(null);
                   setError("");
                 }}
+                onBlur={() => { if (pointsInput === "") setPointsInput("0"); }}
               />
             </label>
-            <p className="muted small-note">{rate ? `1 điểm = ${formatVndPrice(rate)}. Đơn này dùng tối đa ${maxPoints} điểm. Có thể thanh toán toàn bộ bằng điểm.` : "Chưa tải được chính sách sử dụng điểm. Bạn vẫn có thể đặt hàng không dùng điểm."}</p>
+            {rateLoading ? <p className="muted small-note" role="status">Đang tải chính sách điểm…</p> : rate ? (
+              <p className="muted small-note">1 điểm = {formatVndPrice(rate)}. Đơn này dùng tối đa <strong>{maxPoints}</strong> điểm.</p>
+            ) : (
+              <div className="inline-feedback" role="alert"><span>{rateError || "Chưa thể sử dụng điểm lúc này."}</span><button type="button" className="text-button" onClick={() => void reloadRate()}>Thử lại</button></div>
+            )}
             {invalidPoints && <p role="alert" className="form-error">Chỉ dùng tối đa {maxPoints} điểm cho đơn này.</p>}
-            <button type="button" className="secondary-button" disabled={!rate} onClick={() => {setPoints(maxPoints);setQuote(null);setError("");}}>Dùng điểm tối đa</button>
+            <div className="summary-actions">
+              <button type="button" className="secondary-button" disabled={!rate || maxPoints === 0} onClick={() => {setPointsInput(String(maxPoints));setQuote(null);setError("");}}>Dùng tối đa</button>
+              <button type="button" className="secondary-button" disabled={!rate || points === 0} onClick={() => {setPointsInput("0");setQuote(null);setError("");}}>Không dùng điểm</button>
+            </div>
             {quote && (
               <div className="quote-details" aria-live="polite">
                 <p>Giảm bằng điểm <strong>{formatVndPrice(quote.pointsDiscountAmount)}</strong></p>
                 <p>{quote.vnpayPayableAmount === 0 ? "Thanh toán hoàn toàn bằng điểm" : "Thanh toán VNPay"} <strong>{formatVndPrice(quote.vnpayPayableAmount)}</strong></p>
               </div>
             )}
-            <button type="button" className="secondary-button" disabled={invalidPoints} onClick={() => void getQuote()}>
-              Xem giá chính thức
+            <button type="button" className="secondary-button" disabled={invalidPoints || rateLoading} onClick={() => void getQuote()}>
+              {quote ? "Tính lại tổng tiền" : "Áp dụng điểm & tính tiền"}
             </button>
             <button
               type="button"
