@@ -307,7 +307,7 @@ export default function CartPage() {
               </div>
             )}
             <button type="button" className="secondary-button" disabled={invalidPoints || rateLoading} onClick={() => void getQuote()}>
-              {quote ? "Tính lại tổng tiền" : "Áp dụng điểm & tính tiền"}
+              {quote ? "Tính lại tổng tiền" : "Xem giá chính thức"}
             </button>
             <button
               type="button"
