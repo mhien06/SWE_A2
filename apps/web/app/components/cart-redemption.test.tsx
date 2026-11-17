@@ -27,7 +27,7 @@ it("accepts points typed manually and requests an official partial-discount quot
  });
  render(<CartPage/>);await screen.findByText("Coffee");
  fireEvent.change(screen.getByRole("spinbutton",{name:/Điểm sử dụng/}),{target:{value:"120"}});
- fireEvent.click(screen.getByRole("button",{name:"Áp dụng điểm & tính tiền"}));
+ fireEvent.click(screen.getByRole("button",{name:"Xem giá chính thức"}));
  expect(await screen.findByText("27.000đ")).toBeInTheDocument();
  expect(state.request).toHaveBeenCalledWith("/orders/quote",{method:"POST",body:JSON.stringify({pointsRedeemed:120})});
 });
